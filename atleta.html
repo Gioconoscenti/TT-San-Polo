@@ -228,7 +228,7 @@ async function init(){
       var opt=document.createElement('option');
       opt.value=s.ID;
       var isOggi=s.Data===todayS;
-      opt.textContent=(isOggi?'\uD83D\uDFE2 OGGI \u2013 ':'')+fmtDate(s.Data)+' \u2013 '+(s.Livello||'');
+      opt.textContent=(isOggi?'\uD83D\uDFE2 OGGI \u2013 ':'')+fmtDate(s.Data)+' \u2013 '+(s.Aperta==='SI'?'\uD83C\uDFC6 Aperta':s.Corso||'');
       sel.appendChild(opt);
     });
 
@@ -245,11 +245,13 @@ function onSessChange(){
   const sel=document.getElementById('atlSelect');
   if(!id){sel.innerHTML='<option value="">Prima seleziona una sessione</option>';return;}
   const sess=DB.sessioni.find(s=>String(s.ID)===String(id));
-  // Filtra per livello se la sessione ha un livello e ci sono atleti corrispondenti
-  let atleti=DB.atleti.filter(a=>a.Attivo==='SI'&&a.Livello===sess?.Livello);
-  // Fallback: se nessun atleta corrisponde al livello, mostra tutti gli attivi
-  if(!atleti.length) atleti=DB.atleti.filter(a=>a.Attivo==='SI');
-  atleti=atleti.sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+  function getCorsi(a){return String(a.Corsi||a.Livelli||a.Livello||'').split(',').map(l=>l.trim()).filter(Boolean);}
+  // Sessione aperta: tutti gli atleti attivi
+  let atleti=DB.atleti.filter(a=>{
+    if(a.Attivo!=='SI')return false;
+    if(sess?.Aperta==='SI')return true;
+    return getCorsi(a).includes(sess?.Corso);
+  }).sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
   sel.innerHTML='<option value="">Seleziona il tuo nome...</option>';
   atleti.forEach(a=>{const opt=document.createElement('option');opt.value=a.ID;opt.textContent=`${a.Cognome} ${a.Nome}`;sel.appendChild(opt);});
 }
@@ -267,12 +269,13 @@ function goStep2(){
   document.getElementById('line1').className='step-line done';
   document.getElementById('dot2').className='step-circle active';
 
-  const lvClass={Giovani:'lv-giovani',Adulti:'lv-adulti',Regionali:'lv-regionali',Nazionali:'lv-nazionali'}[selSess.Livello]||'';
+  const lvClass={Giovani:'lv-giovani',Adulti:'lv-adulti',Regionali:'lv-regionali',Nazionali:'lv-nazionali'}[selSess.Corso]||'';
 
+  const tipoLabel=selSess.Aperta==='SI'?'🏆 Aperta a tutti':selSess.Corso;
   document.getElementById('sessInfo').innerHTML=`
-    <div class="info-icon">📅</div>
+    <div class="info-icon">${selSess.Aperta==='SI'?'🏆':'📅'}</div>
     <div><div class="info-main">${fmtDate(selSess.Data)} – ${selSess.Giorno||''}</div>
-    <div class="info-sub"><span class="badge ${lvClass}">${selSess.Livello}</span></div></div>`;
+    <div class="info-sub"><span class="badge ${lvClass}">${tipoLabel}</span></div></div>`;
 
   document.getElementById('atlInfo').innerHTML=`
     <div class="info-icon" style="background:#1a1400;border-color:#3a3000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.9rem;color:var(--gold);">${(selAtl.Nome[0]||'')+(selAtl.Cognome[0]||'')}</div>
