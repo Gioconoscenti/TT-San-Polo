@@ -169,47 +169,87 @@ footer{text-align:center;padding:14px;font-size:.68rem;color:var(--text2);border
 <footer>ASD TENNISTAVOLO SAN POLO · PARMA</footer>
 
 <script>
-const API='https://script.google.com/macros/s/AKfycbzVAp8hBvYrW4qa4upAX3kEiJj-GvYRbXQUz8xv36QJMNGVofxF0OVQesnGvanYnOE9_g/exec';
+const API='https://script.google.com/macros/s/AKfycbwTNTagOMqqWXiMjjJwAU2xPwV7JceIJuwA-4XEseg2mqmQxd35PIjwcTjXChOgRNQ4ug/exec';
 const GIORNI=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
 let DB={atleti:[],sessioni:[],presenze:[]};
 let selSess=null,selAtl=null;
 
-async function get(action){const u=new URL(API);u.searchParams.set('action',action);const r=await fetch(u);return await r.json();}
+async function get(action){
+  const r=await fetch(API+'?action='+encodeURIComponent(action));
+  const d=await r.json();
+  if(d&&d.error) throw new Error(d.error);
+  return d;
+}
 async function post(body){const r=await fetch(API,{method:'POST',body:JSON.stringify(body)});return await r.json();}
 
 async function init(){
+  const sel=document.getElementById('sessSelect');
+  sel.innerHTML='<option value="">Caricamento...</option>';
   try{
     const[a,s,p]=await Promise.all([get('getAtleti'),get('getSessioni'),get('getPresenze')]);
-    DB.atleti=a||[];DB.sessioni=s||[];DB.presenze=p||[];
+    // Normalizza risposta in array
+    function toArray(x){
+      if(!x) return [];
+      if(Array.isArray(x)) return x;
+      if(typeof x==='object') return Object.values(x).filter(function(v){return typeof v==='object';});
+      return [];
+    }
 
-    const oggi=new Date();oggi.setHours(0,0,0,0);
-    const cutoff=new Date(oggi);cutoff.setDate(cutoff.getDate()-2);
-    const sessF=DB.sessioni
-      .filter(s=>{const d=new Date(s.Data+'T12:00:00');return d>=cutoff;})
-      .sort((a,b)=>Math.abs(new Date(a.Data)-oggi)-Math.abs(new Date(b.Data)-oggi));
+    // Converte data in YYYY-MM-DD usando ora LOCALE (non UTC)
+    // es: "2026-03-23T23:00:00.000Z" in fuso +1 → "2026-03-24"
+    function normalizzaData(d){
+      if(!d) return '';
+      var parsed = typeof d==='number' ? new Date((d-25569)*86400*1000) : new Date(d);
+      if(isNaN(parsed)) return String(d);
+      var yyyy=parsed.getFullYear();
+      var mm=String(parsed.getMonth()+1).padStart(2,'0');
+      var dd=String(parsed.getDate()).padStart(2,'0');
+      return yyyy+'-'+mm+'-'+dd;
+    }
 
-    const sel=document.getElementById('sessSelect');
+    DB.atleti=toArray(a);
+    DB.presenze=toArray(p);
+    DB.sessioni=toArray(s).map(function(sess){
+      return Object.assign({},sess,{Data:normalizzaData(sess.Data)});
+    });
+
+    console.log('sessioni dopo normalizzazione:', DB.sessioni);
+
+    if(!DB.sessioni.length){
+      sel.innerHTML='<option value="">Nessuna sessione nel foglio</option>';
+      return;
+    }
+
+    var todayS=todayStr();
+    var sessF=[].concat(DB.sessioni).sort(function(a,b){return new Date(b.Data)-new Date(a.Data);});
+
     sel.innerHTML='<option value="">Seleziona la sessione...</option>';
-    sessF.forEach(s=>{
-      const opt=document.createElement('option');opt.value=s.ID;
-      const isOggi=s.Data===todayStr();
-      opt.textContent=(isOggi?'🟢 OGGI – ':'')+fmtDate(s.Data)+' – '+s.Livello;
+    sessF.forEach(function(s){
+      var opt=document.createElement('option');
+      opt.value=s.ID;
+      var isOggi=s.Data===todayS;
+      opt.textContent=(isOggi?'\uD83D\uDFE2 OGGI \u2013 ':'')+fmtDate(s.Data)+' \u2013 '+(s.Livello||'');
       sel.appendChild(opt);
     });
-    if(!sessF.length)sel.innerHTML='<option value="">Nessuna sessione disponibile</option>';
 
-    const sOggi=DB.sessioni.find(s=>s.Data===todayStr());
+    var sOggi=DB.sessioni.find(function(s){return s.Data===todayS;});
     if(sOggi){sel.value=sOggi.ID;onSessChange();}
-  }catch(e){document.getElementById('sessSelect').innerHTML='<option>Errore caricamento</option>';}
-}
 
+  }catch(e){
+    sel.innerHTML='<option value="">Errore: '+e.message+'</option>';
+    console.error('Errore init:',e);
+  }
+}
 function onSessChange(){
   const id=document.getElementById('sessSelect').value;
   const sel=document.getElementById('atlSelect');
   if(!id){sel.innerHTML='<option value="">Prima seleziona una sessione</option>';return;}
   const sess=DB.sessioni.find(s=>String(s.ID)===String(id));
-  const atleti=DB.atleti.filter(a=>a.Attivo==='SI'&&(!sess||a.Livello===sess.Livello))
-    .sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+  // Filtra per livello se la sessione ha un livello e ci sono atleti corrispondenti
+  let atleti=DB.atleti.filter(a=>a.Attivo==='SI'&&a.Livello===sess?.Livello);
+  // Fallback: se nessun atleta corrisponde al livello, mostra tutti gli attivi
+  if(!atleti.length) atleti=DB.atleti.filter(a=>a.Attivo==='SI');
+  atleti=atleti.sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
   sel.innerHTML='<option value="">Seleziona il tuo nome...</option>';
   atleti.forEach(a=>{const opt=document.createElement('option');opt.value=a.ID;opt.textContent=`${a.Cognome} ${a.Nome}`;sel.appendChild(opt);});
 }

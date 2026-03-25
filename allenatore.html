@@ -306,7 +306,7 @@ tr:hover td{background:var(--bg3)}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-const API='https://script.google.com/macros/s/AKfycbzVAp8hBvYrW4qa4upAX3kEiJj-GvYRbXQUz8xv36QJMNGVofxF0OVQesnGvanYnOE9_g/exec';
+const API='https://script.google.com/macros/s/AKfycbwTNTagOMqqWXiMjjJwAU2xPwV7JceIJuwA-4XEseg2mqmQxd35PIjwcTjXChOgRNQ4ug/exec';
 const PWD='ttsanpolo';
 const GIORNI=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
 let DB={atleti:[],sessioni:[],presenze:[],accoppiamenti:[]};
@@ -325,13 +325,25 @@ async function init(){await loadAll();renderDashboard();setTodayDate();}
 async function loadAll(){
   try{
     const[a,s,p,ac]=await Promise.all([get('getAtleti'),get('getSessioni'),get('getPresenze'),get('getAccoppiamenti')]);
-    DB.atleti=a||[];DB.sessioni=s||[];DB.presenze=p||[];DB.accoppiamenti=ac||[];
+    function toArray(x){
+      if(!x) return [];
+      if(Array.isArray(x)) return x;
+      if(typeof x==='object') return Object.values(x).filter(v=>typeof v==='object');
+      return [];
+    }
+    DB.atleti=toArray(a);
+    DB.presenze=toArray(p);
+    DB.accoppiamenti=toArray(ac);
+    // Normalizza date sessioni (Sheets le manda in UTC ISO, bisogna usare ora locale)
+    DB.sessioni=toArray(s).map(function(sess){
+      return Object.assign({},sess,{Data:parseDataLocale(sess.Data)});
+    });
   }catch(e){toast('Errore: '+e.message,'err');}
 }
 
 async function get(action){
-  const u=new URL(API);u.searchParams.set('action',action);
-  const r=await fetch(u);const d=await r.json();
+  const r=await fetch(API+'?action='+encodeURIComponent(action));
+  const d=await r.json();
   if(d.error)throw new Error(d.error);return d;
 }
 async function post(body){
@@ -649,6 +661,15 @@ function nomeAtl(id){
   if(id==='BYE')return'BYE';
   const a=DB.atleti.find(x=>String(x.ID)===String(id));
   return a?`${a.Cognome} ${a.Nome}`:`#${id}`;
+}
+function parseDataLocale(d){
+  if(!d) return '';
+  var parsed = typeof d==='number' ? new Date((d-25569)*86400*1000) : new Date(d);
+  if(isNaN(parsed)) return String(d);
+  var yyyy=parsed.getFullYear();
+  var mm=String(parsed.getMonth()+1).padStart(2,'0');
+  var dd=String(parsed.getDate()).padStart(2,'0');
+  return yyyy+'-'+mm+'-'+dd;
 }
 function fmtDate(d){
   if(!d)return'–';
