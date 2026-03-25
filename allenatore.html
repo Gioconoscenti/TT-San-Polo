@@ -212,6 +212,7 @@ tr:hover td{background:var(--bg3)}
           <option value="">Tutti</option>
           <option>Giovani</option><option>Adulti</option>
           <option>Regionali</option><option>Nazionali</option>
+          <option>Torneo</option>
         </select>
       </div>
       <div class="fg" style="margin:0;">
@@ -278,6 +279,7 @@ tr:hover td{background:var(--bg3)}
           <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Adulti"><label>Adulti</label></div>
           <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Regionali"><label>Regionali</label></div>
           <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Nazionali"><label>Nazionali</label></div>
+          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Torneo"><label>Torneo</label></div>
         </div>
       </div>
       <div class="fg">
@@ -335,6 +337,7 @@ tr:hover td{background:var(--bg3)}
         <select id="sLivello">
           <option>Giovani</option><option>Adulti</option>
           <option>Regionali</option><option>Nazionali</option>
+          <option>Torneo</option>
         </select>
       </div>
       <div class="fg"><label>Ora Inizio</label><input type="time" id="sOraInizio"></div>
@@ -363,10 +366,11 @@ tr:hover td{background:var(--bg3)}
     <div class="modal-grid">
       <div class="fg full"><label>Nome Template</label><input id="tNome" placeholder="es. Adulti Sera"></div>
       <div class="fg">
-        <label>Livello</label>
+        <label>Corso</label>
         <select id="tCorso">
           <option>Giovani</option><option>Adulti</option>
           <option>Regionali</option><option>Nazionali</option>
+          <option>Torneo</option>
         </select>
       </div>
       <div class="fg"><label>Ora Inizio</label><input type="time" id="tOraInizio"></div>
@@ -910,7 +914,7 @@ function fmtDate(d){
   return new Date((String(d).includes('T')?d:d+'T12:00:00')).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 function todayStr(){return new Date().toISOString().split('T')[0];}
-function lvBadge(lv){return{Giovani:'lv-giovani',Adulti:'lv-adulti',Regionali:'lv-regionali',Nazionali:'lv-nazionali'}[lv]||'badge-gray';}
+function lvBadge(lv){return{Giovani:'lv-giovani',Adulti:'lv-adulti',Regionali:'lv-regionali',Nazionali:'lv-nazionali',Torneo:'badge-gold'}[lv]||'badge-gray';}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function toast(msg,type='ok'){
