@@ -171,6 +171,7 @@ footer{text-align:center;padding:14px;font-size:.68rem;color:var(--text2);border
 <script>
 const API='https://script.google.com/macros/s/AKfycbwTNTagOMqqWXiMjjJwAU2xPwV7JceIJuwA-4XEseg2mqmQxd35PIjwcTjXChOgRNQ4ug/exec';
 const GIORNI=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let DB={atleti:[],sessioni:[],presenze:[]};
 let selSess=null,selAtl=null;
 
@@ -236,7 +237,7 @@ async function init(){
     if(sOggi){sel.value=sOggi.ID;onSessChange();}
 
   }catch(e){
-    sel.innerHTML='<option value="">Errore: '+e.message+'</option>';
+    sel.innerHTML='<option value="">Errore: '+esc(e.message)+'</option>';
     console.error('Errore init:',e);
   }
 }
@@ -274,13 +275,13 @@ function goStep2(){
   const tipoLabel=selSess.Aperta==='SI'?'🏆 Aperta a tutti':selSess.Corso;
   document.getElementById('sessInfo').innerHTML=`
     <div class="info-icon">${selSess.Aperta==='SI'?'🏆':'📅'}</div>
-    <div><div class="info-main">${fmtDate(selSess.Data)} – ${selSess.Giorno||''}</div>
-    <div class="info-sub"><span class="badge ${lvClass}">${tipoLabel}</span></div></div>`;
+    <div><div class="info-main">${fmtDate(selSess.Data)} – ${esc(selSess.Giorno)||''}</div>
+    <div class="info-sub"><span class="badge ${lvClass}">${esc(tipoLabel)}</span></div></div>`;
 
   document.getElementById('atlInfo').innerHTML=`
-    <div class="info-icon" style="background:#1a1400;border-color:#3a3000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.9rem;color:var(--gold);">${(selAtl.Nome[0]||'')+(selAtl.Cognome[0]||'')}</div>
-    <div><div class="info-main">${selAtl.Cognome} ${selAtl.Nome}</div>
-    <div class="info-sub"><span class="badge ${lvClass}">${selAtl.Livello}</span></div></div>`;
+    <div class="info-icon" style="background:#1a1400;border-color:#3a3000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.9rem;color:var(--gold);">${esc((selAtl.Nome[0]||'')+(selAtl.Cognome[0]||''))}</div>
+    <div><div class="info-main">${esc(selAtl.Cognome)} ${esc(selAtl.Nome)}</div>
+    <div class="info-sub"><span class="badge ${lvClass}">${esc(selAtl.Livello)}</span></div></div>`;
 
   const giaP=DB.presenze.find(p=>String(p.ID_Sessione)===String(sId)&&String(p.ID_Atleta)===String(aId));
   const already=document.getElementById('alreadyBadge');

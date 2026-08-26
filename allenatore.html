@@ -388,8 +388,11 @@ tr:hover td{background:var(--bg3)}
 <script>
 const API='https://script.google.com/macros/s/AKfycbwTNTagOMqqWXiMjjJwAU2xPwV7JceIJuwA-4XEseg2mqmQxd35PIjwcTjXChOgRNQ4ug/exec';
 const PWD='ttsanpolo';
+const TOKEN='e0ceb050-c5b2-4970-8527-1798a03eb168';
 const GIORNI=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
 const LIVELLI=['Giovani','Adulti','Regionali','Nazionali'];
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 let DB={atleti:[],sessioni:[],presenze:[],accoppiamenti:[],template:[]};
 let editAtlId=null,currSessId=null,editTplId=null;
@@ -422,13 +425,13 @@ async function loadAll(){
 
 // ── API ────────────────────────────────────────────────
 async function get(action){
-  const r=await fetch(API+'?action='+encodeURIComponent(action));
+  const r=await fetch(API+'?action='+encodeURIComponent(action)+'&token='+encodeURIComponent(TOKEN));
   const d=await r.json();
   if(d&&d.error)throw new Error(d.error);
   return d;
 }
 async function post(body){
-  const r=await fetch(API,{method:'POST',body:JSON.stringify(body)});
+  const r=await fetch(API,{method:'POST',body:JSON.stringify({...body,token:TOKEN})});
   const d=await r.json();if(d.error)throw new Error(d.error);return d;
 }
 
@@ -455,9 +458,9 @@ function renderDashboard(){
   const sorted=[...DB.sessioni].sort((a,b)=>new Date(b.Data)-new Date(a.Data)).slice(0,6);
   document.getElementById('dashSess').innerHTML=sorted.length?sorted.map(s=>{
     const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(s.ID)).length;
-    const orario=s.OraInizio?` ${s.OraInizio}${s.OraFine?'–'+s.OraFine:''}`:'';
+    const orario=s.OraInizio?` ${esc(s.OraInizio)}${s.OraFine?'–'+esc(s.OraFine):''}`:'';
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
-      <span style="font-family:'Barlow Condensed',sans-serif;">${fmtDate(s.Data)}<span style="color:var(--text2);font-size:.8rem;">${orario}</span> <span class="badge ${lvBadge(s.Corso)}" style="margin-left:6px;">${s.Corso}</span></span>
+      <span style="font-family:'Barlow Condensed',sans-serif;">${fmtDate(s.Data)}<span style="color:var(--text2);font-size:.8rem;">${orario}</span> <span class="badge ${lvBadge(s.Corso)}" style="margin-left:6px;">${esc(s.Corso)}</span></span>
       <span class="badge badge-blue">${n} pres.</span></div>`;
   }).join(''):'<div class="empty">Nessuna sessione</div>';
 
@@ -489,15 +492,15 @@ function renderAtleti(){
   if(!lista.length){tb.innerHTML='<tr><td colspan="8"><div class="empty">Nessun atleta trovato</div></td></tr>';return;}
   tb.innerHTML=lista.map(a=>{
     const livelli=getLivelli(a);
-    const badgesHtml=livelli.map(l=>`<span class="badge ${lvBadge(l)}" style="margin-right:3px;">${l}</span>`).join('');
+    const badgesHtml=livelli.map(l=>`<span class="badge ${lvBadge(l)}" style="margin-right:3px;">${esc(l)}</span>`).join('');
     return`<tr>
-      <td>${a.Cognome}</td><td>${a.Nome}</td>
+      <td>${esc(a.Cognome)}</td><td>${esc(a.Nome)}</td>
       <td>${badgesHtml}</td>
-      <td style="font-size:.78rem;color:var(--text2);text-align:center;">${a.Categoria||'–'}</td>
-      <td style="font-size:.78rem;color:var(--text2);">${a.Livello||'–'}</td>
-      <td style="font-family:'Barlow Condensed',sans-serif;font-size:.8rem;color:var(--gold);">${a.Tessera||'–'}</td>
-      <td style="font-size:.78rem;color:var(--text2);">${a.Giorni||'–'}</td>
-      <td style="font-size:.78rem;color:var(--text2);">${a.Telefono||'–'}</td>
+      <td style="font-size:.78rem;color:var(--text2);text-align:center;">${esc(a.Categoria)||'–'}</td>
+      <td style="font-size:.78rem;color:var(--text2);">${esc(a.Livello)||'–'}</td>
+      <td style="font-family:'Barlow Condensed',sans-serif;font-size:.8rem;color:var(--gold);">${esc(a.Tessera)||'–'}</td>
+      <td style="font-size:.78rem;color:var(--text2);">${esc(a.Giorni)||'–'}</td>
+      <td style="font-size:.78rem;color:var(--text2);">${esc(a.Telefono)||'–'}</td>
       <td>${a.Attivo==='SI'?'<span class="badge badge-green">Attivo</span>':'<span class="badge badge-gray">Inattivo</span>'}</td>
       <td><div style="display:flex;gap:5px;">
         <button class="btn btn-ghost btn-sm" onclick="openModalAtleta(${a.ID})">✏️</button>
@@ -598,8 +601,8 @@ function renderTemplate(){
   body.innerHTML=`<div class="template-grid">${DB.template.map(t=>`
     <div class="template-card">
       <div class="template-info">
-        <div class="template-nome">${t.Nome} <span class="badge ${lvBadge(t.Corso)}">${t.Corso}</span></div>
-        <div class="template-orario">🕐 ${t.OraInizio||'–'} → ${t.OraFine||'–'}</div>
+        <div class="template-nome">${esc(t.Nome)} <span class="badge ${lvBadge(t.Corso)}">${esc(t.Corso)}</span></div>
+        <div class="template-orario">🕐 ${esc(t.OraInizio)||'–'} → ${esc(t.OraFine)||'–'}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;">
         <button class="btn btn-ghost btn-sm" onclick="openModalTemplate(${t.ID})">✏️</button>
@@ -662,15 +665,15 @@ function renderSessioni(){
   if(!sorted.length){tb.innerHTML='<tr><td colspan="7"><div class="empty">Nessuna sessione</div></td></tr>';return;}
   tb.innerHTML=sorted.map(s=>{
     const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(s.ID)).length;
-    const orario=s.OraInizio?(s.OraInizio+(s.OraFine?' – '+s.OraFine:'')):'–';
+    const orario=s.OraInizio?(esc(s.OraInizio)+(s.OraFine?' – '+esc(s.OraFine):'')):'–';
     return`<tr>
       <td style="font-family:'Barlow Condensed',sans-serif;">${fmtDate(s.Data)}</td>
-      <td style="color:var(--text2);">${s.Giorno||''}</td>
-      <td><span class="badge ${lvBadge(s.Corso)}">${s.Corso||''}</span></td>
+      <td style="color:var(--text2);">${esc(s.Giorno)||''}</td>
+      <td><span class="badge ${lvBadge(s.Corso)}">${esc(s.Corso)||''}</span></td>
       <td style="font-family:'Barlow Condensed',sans-serif;color:var(--text2);">${orario}</td>
       <td><span class="badge badge-blue">${n}</span></td>
       <td>${s.Aperta==='SI'?'<span class="badge badge-gold">🏆 Aperta</span>':'<span class="badge badge-gray">Corso</span>'}</td>
-      <td style="color:var(--text2);font-size:.8rem;">${s.Note||'–'}</td>
+      <td style="color:var(--text2);font-size:.8rem;">${esc(s.Note)||'–'}</td>
       <td><button class="btn btn-red btn-sm" onclick="delSess(${s.ID})">🗑</button></td></tr>`;
   }).join('');
 }
@@ -772,7 +775,7 @@ function loadPresenze(){
         const p=presIds.includes(String(a.ID));
         return`<div class="pres-item${p?' presente':''}" onclick="togglePres(${a.ID},this)">
           <input type="checkbox" ${p?'checked':''} onclick="event.stopPropagation();togglePres(${a.ID},this.closest('.pres-item'))">
-          <span class="pres-name">${a.Cognome} ${a.Nome}</span>
+          <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}</span>
         </div>`;
       }).join('')}</div>`
     :'<div class="empty">Nessun atleta per questo livello</div>';
@@ -892,7 +895,7 @@ function loadStorico(){
       return`<div class="storico-item">
         <span class="storico-date">${sess?fmtDate(sess.Data):'–'}</span>
         <span>vs <strong>${nomeAtl(avvId)}</strong></span>
-        <span class="badge ${lvBadge(sess?.Corso)}" style="margin-left:auto;">${sess?.Corso||''}</span>
+        <span class="badge ${lvBadge(sess?.Corso)}" style="margin-left:auto;">${esc(sess?.Corso)||''}</span>
       </div>`;
     }).join('')}`;
 }
@@ -901,7 +904,7 @@ function loadStorico(){
 function nomeAtl(id){
   if(id==='BYE')return'BYE';
   const a=DB.atleti.find(x=>String(x.ID)===String(id));
-  return a?`${a.Cognome} ${a.Nome}`:`#${id}`;
+  return a?esc(`${a.Cognome} ${a.Nome}`):`#${id}`;
 }
 function parseDataLocale(d){
   if(!d)return'';
@@ -920,7 +923,7 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 function toast(msg,type='ok'){
   const c=document.getElementById('toastWrap');
   const t=document.createElement('div');t.className=`toast ${type}`;
-  t.innerHTML=`<span>${type==='ok'?'✅':'❌'}</span>${msg}`;
+  t.innerHTML=`<span>${type==='ok'?'✅':'❌'}</span>${esc(msg)}`;
   c.appendChild(t);setTimeout(()=>t.remove(),3000);
 }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
