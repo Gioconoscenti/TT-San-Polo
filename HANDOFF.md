@@ -26,7 +26,18 @@ atleta.html      ──┘         apps-script/Code.gs (in questo repo)
 - Link al progetto Apps Script: `________________`
 - URL di deploy (`/exec`) attualmente in uso in `allenatore.html`/`atleta.html`: vedi
   costante `API` in entrambi i file.
-- Dove sono ospitate le due pagine HTML: `________________`
+- Dove sono ospitate le due pagine HTML: GitHub Pages, https://gioconoscenti.github.io/TT-San-Polo/
+  (build "legacy" dal branch `main`, root `/`).
+
+**Nota**: la build "legacy" di GitHub Pages può restare bloccata in stato "building" dopo un
+push e non aggiornare la pagina live, anche per giorni, senza segnalare errori. Se dopo un
+push la pagina live non riflette le modifiche (es. `curl -sI <url> | grep Last-Modified`
+mostra una data vecchia), forza una nuova build con:
+```
+gh api -X POST repos/Gioconoscenti/TT-San-Polo/pages/builds
+```
+poi verifica con `gh api repos/Gioconoscenti/TT-San-Polo/pages/builds/latest` che passi a
+`"status":"built"`.
 
 ## 3. Segreti e come ruotarli
 
@@ -141,9 +152,11 @@ cancella e rigenera gli accoppiamenti a ogni sessione.
 ## 8. Rischi noti e accettati in questa versione
 
 - **Nessuna identità reale per l'auto check-in**: in `atleta.html` chiunque può selezionare
-  il nome di un altro atleta dalla tendina e segnarlo presente. È un compromesso accettato
-  per tenere il flusso semplice (nessun login per gli atleti). Se in futuro serve di più,
-  la strada naturale è un link personale "magico" per atleta (con un token nell'URL) invece
+  il nome di un altro atleta dalla tendina e segnarlo presente **o rimuoverne la presenza**
+  (stesso perimetro pubblico, per simmetria: chi può registrarsi può anche disdire). È un
+  compromesso accettato per tenere il flusso semplice (nessun login per gli atleti). Se in
+  futuro serve di più, la strada naturale è un link personale "magico" per atleta (con un
+  token nell'URL) invece
   della tendina libera.
 - **`PWD` in `allenatore.html` non è vera autenticazione**: è solo un gate contro accessi
   accidentali. La protezione reale sui dati è `APP_TOKEN`, verificato server-side.

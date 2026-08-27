@@ -27,10 +27,13 @@
  * - Le richieste di lettura (doGet) sono pubbliche: servono anche alla pagina atleta.html,
  *   che non ha alcun segreto incorporato. I dati personali di Atleti (Telefono, Email,
  *   Tessera) vengono però rimossi dalla risposta se non viene fornito un token valido.
- * - La scrittura "addRow" sul foglio Presenze è pubblica (è l'auto-conferma presenza
- *   dell'atleta) ma viene comunque validata: sessione e atleta devono esistere davvero
- *   ed essere coerenti, ed è idempotente (una seconda conferma non crea un duplicato).
- * - Tutte le altre scritture (addRow su altri fogli, ogni updateRow, ogni deleteRow)
+ * - Le scritture "addRow" e "deleteRow" sul foglio Presenze sono pubbliche (sono
+ *   l'auto-conferma/rimozione presenza dell'atleta) ma vengono comunque validate:
+ *   per addRow, sessione e atleta devono esistere davvero ed essere coerenti, ed è
+ *   idempotente (una seconda conferma non crea un duplicato). Non c'è un'identità reale
+ *   per atleta, quindi chiunque selezioni un nome dalla pagina può segnarlo presente o
+ *   rimuoverlo: è un compromesso accettato per tenere il flusso senza login (vedi HANDOFF.md).
+ * - Tutte le altre scritture (addRow su altri fogli, updateRow, deleteRow su altri fogli)
  *   richiedono un token valido: sono per il pannello allenatore.
  * - Non è comunque un sistema di autenticazione forte: chi apre il sorgente di
  *   allenatore.html vede comunque il token. Il vantaggio reale è che il token è
@@ -65,7 +68,10 @@ const SHEETS = {
   Template: {
     idCol: 'ID',
     required: ['Nome', 'Corso'],
-    fields: ['Nome', 'Corso', 'OraInizio', 'OraFine']
+    // Giorno (facoltativo) è il giorno della settimana usato dalla generazione automatica
+    // di sessioni per periodo ("settimana tipo"): un template senza Giorno resta comunque
+    // utilizzabile per compilare manualmente una singola sessione.
+    fields: ['Nome', 'Corso', 'OraInizio', 'OraFine', 'Giorno']
   }
 };
 
@@ -209,14 +215,12 @@ function doPost(e) {
     const authorized = isAuthorized_(token);
     const action = body.action;
 
-    if (action === 'addRow') {
-      // Unica scrittura pubblica consentita: auto check-in presenza dell'atleta.
-      const isPublicCheckin = body.sheet === 'Presenze';
-      if (!authorized && !isPublicCheckin) return errorOut_('Non autorizzato');
-      return handleAddRow_(body, authorized);
-    }
+    // Uniche scritture pubbliche consentite: auto check-in/rimozione presenza dell'atleta.
+    const isPublicPresenza = body.sheet === 'Presenze' && (action === 'addRow' || action === 'deleteRow');
 
-    if (!authorized) return errorOut_('Non autorizzato');
+    if (!authorized && !isPublicPresenza) return errorOut_('Non autorizzato');
+
+    if (action === 'addRow') return handleAddRow_(body, authorized);
     if (action === 'updateRow') return handleUpdateRow_(body);
     if (action === 'deleteRow') return handleDeleteRow_(body);
     return errorOut_('Azione non valida: ' + action);
