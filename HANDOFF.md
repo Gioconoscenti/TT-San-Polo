@@ -149,7 +149,49 @@ cancella e rigenera gli accoppiamenti a ogni sessione.
    riga corrente, quindi il problema non si ripresenta una volta migrato — ma non corregge
    da solo eventuali duplicati già presenti.
 
-## 8. Rischi noti e accettati in questa versione
+## 8. Tassonomia Corsi e settimana tipo
+
+I nomi dei Corsi/Livelli sono cambiati rispetto alle prime versioni dell'app:
+
+| Vecchio nome | Nuovo nome |
+|---|---|
+| Giovani | Corso Giovanile |
+| — (nuovo) | Settore Giovanile |
+| Adulti | Corso Adulti |
+| Regionali | Serie Regionale |
+| Nazionali | Agonista Nazionale |
+| Torneo | rimosso (usa il flag "Aperta a tutti" sulla sessione) |
+
+Se trovi dati vecchi (es. un atleta con `Corsi=Regionali`) è perché non è ancora stata
+eseguita la migrazione: vedi `apps-script/Code.gs`, funzione `migraCategorieCorsi()`.
+
+**Settore Giovanile** e **Corso Giovanile** sono due gruppi di atleti distinti (non lo stesso
+gruppo con due nomi): il primo è il livello più avanzato/agonistico del settore giovani,
+allenato insieme agli Agonisti Nazionali nello stesso slot orario.
+
+Orario settimanale attuale (usato per generare i Template via `seedSettimanaTipo()` in
+`apps-script/Code.gs`):
+
+| Giorno | Orario | Corso |
+|---|---|---|
+| Lunedì | 18:30–19:45 | Corso Adulti |
+| Lunedì | 20:00–21:45 | Serie Regionale *(occasionalmente "torneo del lunedì": va marcato a mano come "Aperta a tutti" sulla singola sessione)* |
+| Martedì | 12:45–14:00 | Corso Adulti |
+| Martedì | 16:30–18:15 | Corso Giovanile |
+| Martedì | 18:15–20:15 | Settore Giovanile + Agonista Nazionale (due sessioni parallele) |
+| Martedì | 20:30–21:45 | Corso Adulti |
+| Mercoledì | 16:30–18:15 | Settore Giovanile + Agonista Nazionale (due sessioni parallele) |
+| Mercoledì | 18:30–19:45 | Corso Adulti |
+| Mercoledì | 20:00–21:45 | Serie Regionale |
+| Giovedì | 16:30–18:15 | Corso Giovanile |
+| Giovedì | 18:15–20:15 | Settore Giovanile + Agonista Nazionale (due sessioni parallele) |
+| Giovedì | 20:30–21:45 | Corso Adulti |
+| Venerdì | 16:30–18:15 | Settore Giovanile + Agonista Nazionale (due sessioni parallele) |
+| Venerdì | 18:30–20:00 | Serie Regionale |
+| Sabato | 10:00–11:15 | Corso Adulti |
+| Sabato | 10:00–11:30 | Serie Regionale |
+
+## 9. Rischi noti e accettati in questa versione
 
 - **Nessuna identità reale per l'auto check-in**: in `atleta.html` chiunque può selezionare
   il nome di un altro atleta dalla tendina e segnarlo presente **o rimuoverne la presenza**

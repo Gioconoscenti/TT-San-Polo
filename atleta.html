@@ -69,6 +69,7 @@ select option{background:#1c1c20;}
 .lv-adulti{background:#1a1400;color:var(--gold);border:1px solid #3a3000;}
 .lv-regionali{background:#0d1e10;color:#6fcf97;border:1px solid #1a3a20;}
 .lv-nazionali{background:#1e0d0d;color:var(--red2);border:1px solid #3a1a1a;}
+.lv-settore{background:#1a0d2e;color:#b388ff;border:1px solid #3a1a5a;}
 
 /* SUCCESS */
 .success-wrap{text-align:center;padding:24px 0;animation:fadeUp .4s ease;}
@@ -277,7 +278,7 @@ function goStep2(){
   document.getElementById('line1').className='step-line done';
   document.getElementById('dot2').className='step-circle active';
 
-  const lvClass={Giovani:'lv-giovani',Adulti:'lv-adulti',Regionali:'lv-regionali',Nazionali:'lv-nazionali'}[selSess.Corso]||'';
+  const lvClass={'Corso Giovanile':'lv-giovani','Settore Giovanile':'lv-settore','Corso Adulti':'lv-adulti','Serie Regionale':'lv-regionali','Agonista Nazionale':'lv-nazionali'}[selSess.Corso]||'';
 
   const tipoLabel=selSess.Aperta==='SI'?'🏆 Aperta a tutti':selSess.Corso;
   document.getElementById('sessInfo').innerHTML=`

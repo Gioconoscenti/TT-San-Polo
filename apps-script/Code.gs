@@ -8,9 +8,16 @@
  *      aggiungi APP_TOKEN = una stringa segreta a scelta.
  *      Suggerimento per generarla: esegui una volta Logger.log(Utilities.getUuid())
  *      da una funzione qualsiasi e copia il risultato da Visualizza > Log.
- * 4. Dal menu a tendina in alto seleziona la funzione initSheets ed eseguila una volta
- *    (crea i fogli mancanti con le intestazioni corrette; non tocca i fogli già esistenti
- *    con dati, si limita ad aggiungerli se assenti).
+ * 4. Dal menu a tendina in alto, esegui in ordine queste funzioni una tantum (▶):
+ *      - initSheets: crea i fogli mancanti con le intestazioni corrette; non tocca i fogli
+ *        già esistenti con dati, si limita ad aggiungerli se assenti.
+ *      - migraCategorieCorsi: rinomina i vecchi nomi dei Corsi (Giovani/Adulti/Regionali/
+ *        Nazionali) nei nuovi (Corso Giovanile/Corso Adulti/Serie Regionale/Agonista
+ *        Nazionale) in tutte le righe già presenti in Atleti, Sessioni e Template. Sicura
+ *        da rieseguire: se non trova valori vecchi non cambia nulla.
+ *      - seedSettimanaTipo: crea i Template della settimana tipo del club (vedi HANDOFF.md
+ *        per l'orario completo). Idempotente: salta i Template già esistenti con la stessa
+ *        combinazione Giorno+Corso+OraInizio+OraFine, quindi è sicura da rilanciare.
  * 5. Deploy > Nuova implementazione > tipo "Web app":
  *      - Esegui come: Me
  *      - Chi ha accesso: Chiunque
@@ -302,4 +309,118 @@ function initSheets() {
       sh.appendRow([SHEETS[name].idCol].concat(SHEETS[name].fields));
     }
   });
+}
+
+// Vecchio nome Corso -> nuovo nome Corso. 'Torneo' non viene rinominato: le sessioni
+// torneo sono gestite dal flag Aperta, non da un Corso dedicato.
+const RINOMINA_CORSI_ = {
+  'Giovani': 'Corso Giovanile',
+  'Adulti': 'Corso Adulti',
+  'Regionali': 'Serie Regionale',
+  'Nazionali': 'Agonista Nazionale'
+};
+
+function rinominaCorsoSingolo_(valore) {
+  return RINOMINA_CORSI_[valore] || valore;
+}
+
+/**
+ * Da eseguire una tantum manualmente (menu Esegui), dopo initSheets e prima di
+ * seedSettimanaTipo: rinomina i vecchi nomi dei Corsi nei nuovi, in tutte le righe già
+ * presenti in Atleti (dove Corsi/Livelli può contenere più valori separati da virgola),
+ * Sessioni e Template (valore singolo). Sicura da rieseguire: se un valore è già nel
+ * formato nuovo (o è 'Torneo') resta invariato.
+ */
+function migraCategorieCorsi() {
+  const shAtleti = getSheet_('Atleti');
+  const valuesA = shAtleti.getDataRange().getValues();
+  const headersA = valuesA[0];
+  const colCorsiIdx = headersA.indexOf('Corsi') !== -1 ? headersA.indexOf('Corsi') : headersA.indexOf('Livelli');
+  let modificheA = 0;
+  if (colCorsiIdx !== -1) {
+    for (let i = 1; i < valuesA.length; i++) {
+      const raw = valuesA[i][colCorsiIdx];
+      if (!raw) continue;
+      const nuovo = String(raw).split(',').map(v => rinominaCorsoSingolo_(v.trim())).join(', ');
+      if (nuovo !== raw) {
+        shAtleti.getRange(i + 1, colCorsiIdx + 1).setValue(nuovo);
+        modificheA++;
+      }
+    }
+  }
+
+  const conteggi = { Sessioni: 0, Template: 0 };
+  ['Sessioni', 'Template'].forEach(nomeFoglio => {
+    const sh = getSheet_(nomeFoglio);
+    const values = sh.getDataRange().getValues();
+    const headers = values[0];
+    const colIdx = headers.indexOf('Corso');
+    if (colIdx === -1) return;
+    for (let i = 1; i < values.length; i++) {
+      const raw = values[i][colIdx];
+      if (!raw) continue;
+      const nuovo = rinominaCorsoSingolo_(raw);
+      if (nuovo !== raw) {
+        sh.getRange(i + 1, colIdx + 1).setValue(nuovo);
+        conteggi[nomeFoglio]++;
+      }
+    }
+  });
+
+  Logger.log('Atleti aggiornati: ' + modificheA + ', Sessioni aggiornate: ' + conteggi.Sessioni + ', Template aggiornati: ' + conteggi.Template);
+}
+
+// Orario settimanale del club: Giorno, Corso, OraInizio, OraFine. Gli slot con due gruppi
+// paralleli (settore giovanile + agonisti nazionali) compaiono come due righe separate,
+// stesso Giorno/orario, Corso diverso.
+const SETTIMANA_TIPO_ = [
+  { Giorno: 'Lunedì', Corso: 'Corso Adulti', OraInizio: '18:30', OraFine: '19:45' },
+  { Giorno: 'Lunedì', Corso: 'Serie Regionale', OraInizio: '20:00', OraFine: '21:45' },
+  { Giorno: 'Martedì', Corso: 'Corso Adulti', OraInizio: '12:45', OraFine: '14:00' },
+  { Giorno: 'Martedì', Corso: 'Corso Giovanile', OraInizio: '16:30', OraFine: '18:15' },
+  { Giorno: 'Martedì', Corso: 'Settore Giovanile', OraInizio: '18:15', OraFine: '20:15' },
+  { Giorno: 'Martedì', Corso: 'Agonista Nazionale', OraInizio: '18:15', OraFine: '20:15' },
+  { Giorno: 'Martedì', Corso: 'Corso Adulti', OraInizio: '20:30', OraFine: '21:45' },
+  { Giorno: 'Mercoledì', Corso: 'Settore Giovanile', OraInizio: '16:30', OraFine: '18:15' },
+  { Giorno: 'Mercoledì', Corso: 'Agonista Nazionale', OraInizio: '16:30', OraFine: '18:15' },
+  { Giorno: 'Mercoledì', Corso: 'Corso Adulti', OraInizio: '18:30', OraFine: '19:45' },
+  { Giorno: 'Mercoledì', Corso: 'Serie Regionale', OraInizio: '20:00', OraFine: '21:45' },
+  { Giorno: 'Giovedì', Corso: 'Corso Giovanile', OraInizio: '16:30', OraFine: '18:15' },
+  { Giorno: 'Giovedì', Corso: 'Settore Giovanile', OraInizio: '18:15', OraFine: '20:15' },
+  { Giorno: 'Giovedì', Corso: 'Agonista Nazionale', OraInizio: '18:15', OraFine: '20:15' },
+  { Giorno: 'Giovedì', Corso: 'Corso Adulti', OraInizio: '20:30', OraFine: '21:45' },
+  { Giorno: 'Venerdì', Corso: 'Settore Giovanile', OraInizio: '16:30', OraFine: '18:15' },
+  { Giorno: 'Venerdì', Corso: 'Agonista Nazionale', OraInizio: '16:30', OraFine: '18:15' },
+  { Giorno: 'Venerdì', Corso: 'Serie Regionale', OraInizio: '18:30', OraFine: '20:00' },
+  { Giorno: 'Sabato', Corso: 'Corso Adulti', OraInizio: '10:00', OraFine: '11:15' },
+  { Giorno: 'Sabato', Corso: 'Serie Regionale', OraInizio: '10:00', OraFine: '11:30' }
+];
+
+/**
+ * Da eseguire una tantum manualmente (menu Esegui), dopo initSheets e migraCategorieCorsi:
+ * crea i Template della settimana tipo del club (SETTIMANA_TIPO_ sopra). Idempotente: salta
+ * una riga se esiste già un Template con la stessa combinazione Giorno+Corso+OraInizio+
+ * OraFine, quindi è sicura da rilanciare senza creare doppioni.
+ */
+function seedSettimanaTipo() {
+  const sh = getSheet_('Template');
+  const esistenti = sheetToObjects_(sh);
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  let creati = 0, saltati = 0;
+
+  SETTIMANA_TIPO_.forEach(t => {
+    const dup = esistenti.some(e =>
+      e.Giorno === t.Giorno && e.Corso === t.Corso && e.OraInizio === t.OraInizio && e.OraFine === t.OraFine
+    );
+    if (dup) { saltati++; return; }
+
+    const id = getNextId_(sh, 'ID');
+    const row = { Nome: t.Corso, Corso: t.Corso, OraInizio: t.OraInizio, OraFine: t.OraFine, Giorno: t.Giorno };
+    const rowArr = headers.map(h => h === 'ID' ? id : (row[h] !== undefined ? row[h] : ''));
+    sh.appendRow(rowArr);
+    esistenti.push(Object.assign({ ID: id }, row));
+    creati++;
+  });
+
+  Logger.log('Template creati: ' + creati + ', già esistenti (saltati): ' + saltati);
 }

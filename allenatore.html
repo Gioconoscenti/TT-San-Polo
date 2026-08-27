@@ -66,6 +66,7 @@ tr:hover td{background:var(--bg3)}
 .lv-adulti{background:#1a1400;color:var(--gold);border:1px solid #3a3000}
 .lv-regionali{background:#0d1e10;color:#6fcf97;border:1px solid #1a3a20}
 .lv-nazionali{background:#1e0d0d;color:var(--red2);border:1px solid #3a1a1a}
+.lv-settore{background:#1a0d2e;color:#b388ff;border:1px solid #3a1a5a}
 
 .action-bar{display:flex;gap:8px;margin-bottom:14px;align-items:flex-end;flex-wrap:wrap;row-gap:6px}
 
@@ -210,9 +211,9 @@ tr:hover td{background:var(--bg3)}
         <label>Livello</label>
         <select id="filtroLv" onchange="renderAtleti()" style="width:150px;">
           <option value="">Tutti</option>
-          <option>Giovani</option><option>Adulti</option>
-          <option>Regionali</option><option>Nazionali</option>
-          <option>Torneo</option>
+          <option>Corso Giovanile</option><option>Settore Giovanile</option>
+          <option>Corso Adulti</option><option>Serie Regionale</option>
+          <option>Agonista Nazionale</option>
         </select>
       </div>
       <div class="fg" style="margin:0;">
@@ -276,11 +277,11 @@ tr:hover td{background:var(--bg3)}
       <div class="fg full">
         <label>Corsi (seleziona uno o più)</label>
         <div class="levels-row" id="levelsRow">
-          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Giovani"><label>Giovani</label></div>
-          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Adulti"><label>Adulti</label></div>
-          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Regionali"><label>Regionali</label></div>
-          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Nazionali"><label>Nazionali</label></div>
-          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Torneo"><label>Torneo</label></div>
+          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Corso Giovanile"><label>Corso Giovanile</label></div>
+          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Settore Giovanile"><label>Settore Giovanile</label></div>
+          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Corso Adulti"><label>Corso Adulti</label></div>
+          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Serie Regionale"><label>Serie Regionale</label></div>
+          <div class="lv-chk" onclick="toggleLv(this)"><input type="checkbox" value="Agonista Nazionale"><label>Agonista Nazionale</label></div>
         </div>
       </div>
       <div class="fg">
@@ -336,9 +337,9 @@ tr:hover td{background:var(--bg3)}
       <div class="fg">
         <label>Livello / Corso</label>
         <select id="sLivello">
-          <option>Giovani</option><option>Adulti</option>
-          <option>Regionali</option><option>Nazionali</option>
-          <option>Torneo</option>
+          <option>Corso Giovanile</option><option>Settore Giovanile</option>
+          <option>Corso Adulti</option><option>Serie Regionale</option>
+          <option>Agonista Nazionale</option>
         </select>
       </div>
       <div class="fg"><label>Ora Inizio</label><input type="time" id="sOraInizio"></div>
@@ -369,9 +370,9 @@ tr:hover td{background:var(--bg3)}
       <div class="fg">
         <label>Corso</label>
         <select id="tCorso">
-          <option>Giovani</option><option>Adulti</option>
-          <option>Regionali</option><option>Nazionali</option>
-          <option>Torneo</option>
+          <option>Corso Giovanile</option><option>Settore Giovanile</option>
+          <option>Corso Adulti</option><option>Serie Regionale</option>
+          <option>Agonista Nazionale</option>
         </select>
       </div>
       <div class="fg"><label>Ora Inizio</label><input type="time" id="tOraInizio"></div>
@@ -419,7 +420,6 @@ const API='https://script.google.com/macros/s/AKfycbwTNTagOMqqWXiMjjJwAU2xPwV7Jc
 const PWD='ttsanpolo';
 const TOKEN='e0ceb050-c5b2-4970-8527-1798a03eb168';
 const GIORNI=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
-const LIVELLI=['Giovani','Adulti','Regionali','Nazionali'];
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
@@ -644,7 +644,7 @@ function openModalTemplate(id=null){
   editTplId=id;
   document.getElementById('tplModalT').textContent=id?'MODIFICA TEMPLATE':'NUOVO TEMPLATE';
   document.getElementById('tNome').value='';
-  document.getElementById('tCorso').value='Giovani';
+  document.getElementById('tCorso').value='Corso Giovanile';
   document.getElementById('tOraInizio').value='';
   document.getElementById('tOraFine').value='';
   document.getElementById('tGiorno').value='';
@@ -652,7 +652,7 @@ function openModalTemplate(id=null){
     const t=DB.template.find(x=>String(x.ID)===String(id));
     if(t){
       document.getElementById('tNome').value=t.Nome||'';
-      document.getElementById('tCorso').value=t.Corso||'Giovani';
+      document.getElementById('tCorso').value=t.Corso||'Corso Giovanile';
       document.getElementById('tOraInizio').value=t.OraInizio||'';
       document.getElementById('tOraFine').value=t.OraFine||'';
       document.getElementById('tGiorno').value=t.Giorno||'';
@@ -777,7 +777,7 @@ function applicaTemplate(){
   if(!id)return;
   const t=DB.template.find(x=>String(x.ID)===String(id));
   if(!t)return;
-  document.getElementById('sLivello').value=t.Corso||'Giovani';
+  document.getElementById('sLivello').value=t.Corso||'Corso Giovanile';
   document.getElementById('sOraInizio').value=t.OraInizio||'';
   document.getElementById('sOraFine').value=t.OraFine||'';
 }
@@ -992,7 +992,7 @@ function fmtDate(d){
   return new Date((String(d).includes('T')?d:d+'T12:00:00')).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 function todayStr(){return new Date().toISOString().split('T')[0];}
-function lvBadge(lv){return{Giovani:'lv-giovani',Adulti:'lv-adulti',Regionali:'lv-regionali',Nazionali:'lv-nazionali',Torneo:'badge-gold'}[lv]||'badge-gray';}
+function lvBadge(lv){return{'Corso Giovanile':'lv-giovani','Settore Giovanile':'lv-settore','Corso Adulti':'lv-adulti','Serie Regionale':'lv-regionali','Agonista Nazionale':'lv-nazionali'}[lv]||'badge-gray';}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function toast(msg,type='ok'){
