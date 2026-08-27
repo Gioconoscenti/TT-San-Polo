@@ -297,16 +297,26 @@ function handleDeleteRow_(body) {
 }
 
 /**
- * Da eseguire una tantum manualmente (menu Esegui) per creare i fogli mancanti
- * con le intestazioni corrette. Non modifica fogli già esistenti.
+ * Da eseguire manualmente (menu Esegui), anche più volte: crea i fogli mancanti con le
+ * intestazioni corrette, e per i fogli già esistenti aggiunge in coda le sole colonne
+ * previste in SHEETS che non ci sono ancora (es. quando si introduce un nuovo campo come
+ * "Giorno" su un foglio Template creato prima che esistesse). Non tocca colonne o dati già
+ * presenti.
  */
 function initSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(SHEETS).forEach(name => {
     let sh = ss.getSheetByName(name);
     if (!sh) sh = ss.insertSheet(name);
+    const attese = [SHEETS[name].idCol].concat(SHEETS[name].fields);
     if (sh.getLastRow() === 0) {
-      sh.appendRow([SHEETS[name].idCol].concat(SHEETS[name].fields));
+      sh.appendRow(attese);
+      return;
+    }
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const mancanti = attese.filter(h => headers.indexOf(h) === -1);
+    if (mancanti.length) {
+      sh.getRange(1, headers.length + 1, 1, mancanti.length).setValues([mancanti]);
     }
   });
 }
@@ -397,22 +407,43 @@ const SETTIMANA_TIPO_ = [
 ];
 
 /**
- * Da eseguire una tantum manualmente (menu Esegui), dopo initSheets e migraCategorieCorsi:
- * crea i Template della settimana tipo del club (SETTIMANA_TIPO_ sopra). Idempotente: salta
- * una riga se esiste già un Template con la stessa combinazione Giorno+Corso+OraInizio+
- * OraFine, quindi è sicura da rilanciare senza creare doppioni.
+ * Da eseguire manualmente (menu Esegui), dopo initSheets e migraCategorieCorsi, anche più
+ * volte: crea i Template della settimana tipo del club (SETTIMANA_TIPO_ sopra). Per ogni riga:
+ * - se esiste già un Template identico (stesso Giorno+Corso+OraInizio+OraFine), non fa nulla;
+ * - se esiste un Template con lo stesso Corso+OraInizio+OraFine ma senza Giorno (capita se
+ *   seedSettimanaTipo è stata eseguita prima che initSheets aggiungesse la colonna Giorno),
+ *   completa quella riga invece di crearne una nuova;
+ * - altrimenti crea una nuova riga.
+ * Richiede che il foglio Template abbia già la colonna Giorno (eseguire prima initSheets()).
  */
 function seedSettimanaTipo() {
   const sh = getSheet_('Template');
-  const esistenti = sheetToObjects_(sh);
   const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  let creati = 0, saltati = 0;
+  const giornoColIdx = headers.indexOf('Giorno');
+  if (giornoColIdx === -1) {
+    throw new Error('Il foglio Template non ha ancora la colonna Giorno: esegui prima initSheets().');
+  }
+  const idColIdx = headers.indexOf('ID');
+  const esistenti = sheetToObjects_(sh);
+  let creati = 0, riparati = 0, invariati = 0;
 
   SETTIMANA_TIPO_.forEach(t => {
-    const dup = esistenti.some(e =>
+    const esatta = esistenti.some(e =>
       e.Giorno === t.Giorno && e.Corso === t.Corso && e.OraInizio === t.OraInizio && e.OraFine === t.OraFine
     );
-    if (dup) { saltati++; return; }
+    if (esatta) { invariati++; return; }
+
+    const parziale = esistenti.find(e =>
+      !e.Giorno && e.Corso === t.Corso && e.OraInizio === t.OraInizio && e.OraFine === t.OraFine
+    );
+    if (parziale) {
+      const raw = sh.getDataRange().getValues();
+      const rowIdx = raw.findIndex((r, i) => i > 0 && String(r[idColIdx]) === String(parziale.ID));
+      if (rowIdx > 0) sh.getRange(rowIdx + 1, giornoColIdx + 1).setValue(t.Giorno);
+      parziale.Giorno = t.Giorno;
+      riparati++;
+      return;
+    }
 
     const id = getNextId_(sh, 'ID');
     const row = { Nome: t.Corso, Corso: t.Corso, OraInizio: t.OraInizio, OraFine: t.OraFine, Giorno: t.Giorno };
@@ -422,5 +453,5 @@ function seedSettimanaTipo() {
     creati++;
   });
 
-  Logger.log('Template creati: ' + creati + ', già esistenti (saltati): ' + saltati);
+  Logger.log('Template creati: ' + creati + ', riparati (Giorno mancante): ' + riparati + ', già corretti: ' + invariati);
 }
