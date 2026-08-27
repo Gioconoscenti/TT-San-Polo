@@ -195,6 +195,13 @@ tr:hover td{background:var(--bg3)}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Presenze <span id="countPres" class="badge badge-gold">0 presenti</span></div>
+        <div class="action-bar" style="margin-bottom:10px;">
+          <div class="fg" style="margin:0;flex:1;min-width:180px;">
+            <label>Aggiungi atleta non in elenco</label>
+            <select id="extraAtletaSel"><option value="">Seleziona una sessione...</option></select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="aggiungiAtletaExtra()">+ Aggiungi</button>
+        </div>
         <div id="presenzeBody"><div class="empty">Seleziona una sessione</div></div>
       </div>
       <div class="card">
@@ -828,34 +835,59 @@ function loadPresenze(){
   const id=document.getElementById('sessSelect').value;
   currSessId=id;
   document.getElementById('btnGenera').disabled=!id;
+  const extraSel=document.getElementById('extraAtletaSel');
   if(!id){
     document.getElementById('presenzeBody').innerHTML='<div class="empty">Seleziona una sessione</div>';
     document.getElementById('coppieBody').innerHTML='<div class="empty">Genera gli accoppiamenti</div>';
-    document.getElementById('countPres').textContent='0 presenti';return;
+    document.getElementById('countPres').textContent='0 presenti';
+    if(extraSel)extraSel.innerHTML='<option value="">Seleziona una sessione...</option>';
+    return;
   }
   const sess=DB.sessioni.find(s=>String(s.ID)===String(id));
-  // Se sessione aperta: tutti gli atleti attivi; altrimenti filtra per corso
-  const atletiCorso=DB.atleti.filter(a=>{
-    if(a.Attivo!=='SI')return false;
-    if(sess?.Aperta==='SI')return true;
-    return getLivelli(a).includes(sess?.Corso);
-  }).sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
   const presIds=DB.presenze.filter(p=>String(p.ID_Sessione)===String(id)).map(p=>String(p.ID_Atleta));
+
+  // Se sessione aperta: tutti gli atleti attivi; altrimenti filtra per corso
+  const atletiAttivi=DB.atleti.filter(a=>a.Attivo==='SI');
+  const inCorso=atletiAttivi.filter(a=>sess?.Aperta==='SI'||getLivelli(a).includes(sess?.Corso));
+  const idsInCorso=new Set(inCorso.map(a=>String(a.ID)));
+  // Atleti già presenti ma non del corso: es. aggiunti a mano, o corso cambiato dopo la presenza
+  const fuoriElencoPresenti=atletiAttivi.filter(a=>!idsInCorso.has(String(a.ID))&&presIds.includes(String(a.ID)));
+  const daMostrare=[...inCorso,...fuoriElencoPresenti].sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
 
   document.getElementById('countPres').textContent=presIds.length+' presenti';
   document.getElementById('btnGenera').disabled=presIds.length<2;
 
-  document.getElementById('presenzeBody').innerHTML=atletiCorso.length
-    ?`<div class="pres-grid">${atletiCorso.map(a=>{
+  document.getElementById('presenzeBody').innerHTML=daMostrare.length
+    ?`<div class="pres-grid">${daMostrare.map(a=>{
         const p=presIds.includes(String(a.ID));
+        const fuori=!idsInCorso.has(String(a.ID));
         return`<div class="pres-item${p?' presente':''}" onclick="togglePres(${a.ID},this)">
           <input type="checkbox" ${p?'checked':''} onclick="event.stopPropagation();togglePres(${a.ID},this.closest('.pres-item'))">
-          <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}</span>
+          <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}${fuori?' <span class="badge badge-gray" style="margin-left:4px;">fuori elenco</span>':''}</span>
         </div>`;
       }).join('')}</div>`
     :'<div class="empty">Nessun atleta per questo livello</div>';
 
+  if(extraSel){
+    const idsMostrati=new Set(daMostrare.map(a=>String(a.ID)));
+    const disponibili=atletiAttivi.filter(a=>!idsMostrati.has(String(a.ID))).sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+    extraSel.innerHTML='<option value="">Seleziona atleta...</option>'+disponibili.map(a=>`<option value="${a.ID}">${esc(a.Cognome)} ${esc(a.Nome)}</option>`).join('');
+  }
+
   renderCoppieEsist(id);
+}
+
+async function aggiungiAtletaExtra(){
+  const sel=document.getElementById('extraAtletaSel');
+  const atletaId=sel.value;
+  if(!atletaId){toast('Seleziona un atleta','err');return;}
+  if(!currSessId)return;
+  try{
+    const res=await post({action:'addRow',sheet:'Presenze',row:{ID_Sessione:currSessId,ID_Atleta:atletaId,Timestamp:new Date().toISOString(),Fonte:'allenatore'}});
+    DB.presenze.push({ID:res.id,ID_Sessione:currSessId,ID_Atleta:atletaId,Fonte:'allenatore'});
+    toast('Atleta aggiunto alla sessione');
+    loadPresenze();
+  }catch(e){toast(e.message,'err');}
 }
 
 async function togglePres(atletaId,el){
