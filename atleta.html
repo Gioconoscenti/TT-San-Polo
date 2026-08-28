@@ -278,7 +278,7 @@ function goStep2(){
   document.getElementById('line1').className='step-line done';
   document.getElementById('dot2').className='step-circle active';
 
-  const lvClass={'Corso Giovanile':'lv-giovani','Settore Giovanile':'lv-settore','Corso Adulti':'lv-adulti','Serie Regionale':'lv-regionali','Agonista Nazionale':'lv-nazionali'}[selSess.Corso]||'';
+  const lvClass={'Corso Giovanile':'lv-giovani','Settore Giovanile':'lv-settore','Corso Adulti':'lv-adulti','Serie Regionale':'lv-regionali','Agonista Nazionale':'lv-nazionali','Torneo':'badge-gold'}[selSess.Corso]||'';
 
   const tipoLabel=selSess.Aperta==='SI'?'🏆 Aperta a tutti':selSess.Corso;
   document.getElementById('sessInfo').innerHTML=`

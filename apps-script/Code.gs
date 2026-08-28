@@ -46,6 +46,13 @@
  *   allenatore.html vede comunque il token. Il vantaggio reale è che il token è
  *   ruotabile da qui senza toccare il codice, e che l'API non è più scrivibile da chiunque
  *   trovi l'URL "a freddo" (bot, scanner, link condiviso per errore).
+ *
+ * CONCORRENZA:
+ * - doPost acquisisce un LockService.getScriptLock() per tutta la durata della richiesta:
+ *   due scritture quasi simultanee (es. più atleti che confermano la presenza nello stesso
+ *   istante) vengono così serializzate invece di rischiare di leggere lo stesso "stato
+ *   precedente" e generare lo stesso ID, o superare entrambe un controllo di unicità prima
+ *   che l'altra abbia scritto. Le letture (doGet) non hanno bisogno del lock.
  */
 
 const SHEETS = {
@@ -216,6 +223,17 @@ function doGet(e) {
 
 // ── doPost ───────────────────────────────────────────────────────
 function doPost(e) {
+  // Il lock serializza le scritture concorrenti: senza, due richieste quasi simultanee
+  // (es. più atleti che confermano la presenza nello stesso istante) potrebbero leggere lo
+  // stesso "stato precedente" del foglio e generare lo stesso ID, o superare entrambe il
+  // controllo di unicità prima che l'altra abbia scritto. Non serve sulle letture (doGet):
+  // lì non c'è un check-poi-scrivi da proteggere.
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (lockErr) {
+    return errorOut_("Il sistema è occupato da un'altra operazione, riprova tra qualche secondo.");
+  }
   try {
     const body = JSON.parse(e.postData.contents);
     const token = body.token || '';
@@ -233,6 +251,8 @@ function doPost(e) {
     return errorOut_('Azione non valida: ' + action);
   } catch (err) {
     return errorOut_(err.message);
+  } finally {
+    lock.releaseLock();
   }
 }
 

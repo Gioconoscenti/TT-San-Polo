@@ -160,10 +160,19 @@ I nomi dei Corsi/Livelli sono cambiati rispetto alle prime versioni dell'app:
 | Adulti | Corso Adulti |
 | Regionali | Serie Regionale |
 | Nazionali | Agonista Nazionale |
-| Torneo | rimosso (usa il flag "Aperta a tutti" sulla sessione) |
+| Torneo | invariato — resta selezionabile per Sessioni/Template (vedi sotto), non per gli atleti |
 
 Se trovi dati vecchi (es. un atleta con `Corsi=Regionali`) è perché non è ancora stata
 eseguita la migrazione: vedi `apps-script/Code.gs`, funzione `migraCategorieCorsi()`.
+
+**Nota su "Torneo"**: inizialmente era stato tolto del tutto in favore del flag "Aperta a
+tutti" sulla sessione, ma il coach lo vuole comunque disponibile come corso a sé stante
+per Sessioni e Template (es. il template "Torneo del Lunedì", una variante alternativa
+allo slot regolare "Serie Regionale" dello stesso giorno/orario). Per questo `Torneo` è
+tornato tra le opzioni dei select `sLivello` (Nuova Sessione) e `tCorso` (Template) in
+`allenatore.html`, ma **non** tra i corsi assegnabili a un atleta (checkbox in `ovAtleta`,
+filtro tab Atleti): non è pensato come categoria permanente di appartenenza, solo come
+variante occasionale di sessione/template.
 
 **Settore Giovanile** e **Corso Giovanile** sono due gruppi di atleti distinti (non lo stesso
 gruppo con due nomi): il primo è il livello più avanzato/agonistico del settore giovani,

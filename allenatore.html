@@ -200,7 +200,7 @@ tr:hover td{background:var(--bg3)}
             <label>Aggiungi atleta non in elenco</label>
             <select id="extraAtletaSel"><option value="">Seleziona una sessione...</option></select>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="aggiungiAtletaExtra()">+ Aggiungi</button>
+          <button class="btn btn-ghost btn-sm" onclick="aggiungiAtletaExtra()" id="btnAggiungiExtra">+ Aggiungi</button>
         </div>
         <div id="presenzeBody"><div class="empty">Seleziona una sessione</div></div>
       </div>
@@ -220,7 +220,7 @@ tr:hover td{background:var(--bg3)}
           <option value="">Tutti</option>
           <option>Corso Giovanile</option><option>Settore Giovanile</option>
           <option>Corso Adulti</option><option>Serie Regionale</option>
-          <option>Agonista Nazionale</option>
+          <option>Agonista Nazionale</option><option>Torneo</option>
         </select>
       </div>
       <div class="fg" style="margin:0;">
@@ -346,7 +346,7 @@ tr:hover td{background:var(--bg3)}
         <select id="sLivello">
           <option>Corso Giovanile</option><option>Settore Giovanile</option>
           <option>Corso Adulti</option><option>Serie Regionale</option>
-          <option>Agonista Nazionale</option>
+          <option>Agonista Nazionale</option><option>Torneo</option>
         </select>
       </div>
       <div class="fg"><label>Ora Inizio</label><input type="time" id="sOraInizio"></div>
@@ -379,7 +379,7 @@ tr:hover td{background:var(--bg3)}
         <select id="tCorso">
           <option>Corso Giovanile</option><option>Settore Giovanile</option>
           <option>Corso Adulti</option><option>Serie Regionale</option>
-          <option>Agonista Nazionale</option>
+          <option>Agonista Nazionale</option><option>Torneo</option>
         </select>
       </div>
       <div class="fg"><label>Ora Inizio</label><input type="time" id="tOraInizio"></div>
@@ -879,15 +879,18 @@ function loadPresenze(){
 
 async function aggiungiAtletaExtra(){
   const sel=document.getElementById('extraAtletaSel');
+  const btn=document.getElementById('btnAggiungiExtra');
   const atletaId=sel.value;
   if(!atletaId){toast('Seleziona un atleta','err');return;}
-  if(!currSessId)return;
+  if(!currSessId||btn.disabled)return;
+  btn.disabled=true;
   try{
     const res=await post({action:'addRow',sheet:'Presenze',row:{ID_Sessione:currSessId,ID_Atleta:atletaId,Timestamp:new Date().toISOString(),Fonte:'allenatore'}});
     DB.presenze.push({ID:res.id,ID_Sessione:currSessId,ID_Atleta:atletaId,Fonte:'allenatore'});
     toast('Atleta aggiunto alla sessione');
     loadPresenze();
   }catch(e){toast(e.message,'err');}
+  finally{btn.disabled=false;}
 }
 
 async function togglePres(atletaId,el){
@@ -919,31 +922,46 @@ function renderCoppieEsist(sessId){
 
 async function generaAcc(){
   if(!currSessId)return;
-  const presIds=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId));
-  const atletiP=presIds.map(p=>DB.atleti.find(a=>String(a.ID)===String(p.ID_Atleta))).filter(Boolean);
-  if(atletiP.length<2){toast('Almeno 2 atleti presenti','err');return;}
-  const vecchi=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)===String(currSessId));
-  for(const v of vecchi){try{await post({action:'deleteRow',sheet:'Accoppiamenti',id:v.ID});}catch(e){}}
-  DB.accoppiamenti=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)!==String(currSessId));
-  const rec=DB.accoppiamenti.slice(-100);
-  const cRec={};rec.forEach(a=>{const k=[String(a.Atleta_A),String(a.Atleta_B)].sort().join('|');cRec[k]=(cRec[k]||0)+1;});
-  const lista=[...atletiP].sort(()=>Math.random()-.5);
-  for(let i=0;i<lista.length-1;i+=2){
-    const k=[String(lista[i].ID),String(lista[i+1].ID)].sort().join('|');
-    for(let j=i+2;j<lista.length;j++){
-      const kN=[String(lista[i].ID),String(lista[j].ID)].sort().join('|');
-      if((cRec[kN]||0)<(cRec[k]||0)){[lista[i+1],lista[j]]=[lista[j],lista[i+1]];break;}
+  const btn=document.getElementById('btnGenera');
+  if(btn.disabled)return; // già in corso, o non ci sono abbastanza presenti
+  btn.disabled=true;
+  try{
+    const presIds=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId));
+    // Deduplica per ID atleta: se per qualsiasi motivo (doppio click, bug residuo) esiste
+    // più di una riga di presenza per lo stesso atleta, non va contato due volte, altrimenti
+    // può capitare che venga abbinato a sé stesso.
+    const idsVisti=new Set();
+    const atletiP=presIds.map(p=>DB.atleti.find(a=>String(a.ID)===String(p.ID_Atleta))).filter(a=>{
+      if(!a||idsVisti.has(a.ID))return false;
+      idsVisti.add(a.ID);return true;
+    });
+    if(atletiP.length<2){toast('Almeno 2 atleti presenti','err');return;}
+    const vecchi=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)===String(currSessId));
+    for(const v of vecchi){try{await post({action:'deleteRow',sheet:'Accoppiamenti',id:v.ID});}catch(e){}}
+    DB.accoppiamenti=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)!==String(currSessId));
+    const rec=DB.accoppiamenti.slice(-100);
+    const cRec={};rec.forEach(a=>{const k=[String(a.Atleta_A),String(a.Atleta_B)].sort().join('|');cRec[k]=(cRec[k]||0)+1;});
+    const lista=[...atletiP].sort(()=>Math.random()-.5);
+    for(let i=0;i<lista.length-1;i+=2){
+      const k=[String(lista[i].ID),String(lista[i+1].ID)].sort().join('|');
+      for(let j=i+2;j<lista.length;j++){
+        const kN=[String(lista[i].ID),String(lista[j].ID)].sort().join('|');
+        if((cRec[kN]||0)<(cRec[k]||0)){[lista[i+1],lista[j]]=[lista[j],lista[i+1]];break;}
+      }
     }
+    const nuove=[];
+    for(let i=0;i<lista.length;i+=2){
+      const a=lista[i],b=lista[i+1];
+      const row={ID_Sessione:currSessId,Atleta_A:a.ID,Atleta_B:b?b.ID:'BYE',Bye:b?'':'SI'};
+      try{const res=await post({action:'addRow',sheet:'Accoppiamenti',row});DB.accoppiamenti.push({ID:res.id,...row});nuove.push({ID:res.id,...row});}
+      catch(e){toast('Errore: '+e.message,'err');}
+    }
+    document.getElementById('coppieBody').innerHTML=renderCoppieHTML(nuove);
+    toast('Accoppiamenti generati!');
+  }finally{
+    const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId)).length;
+    btn.disabled=n<2;
   }
-  const nuove=[];
-  for(let i=0;i<lista.length;i+=2){
-    const a=lista[i],b=lista[i+1];
-    const row={ID_Sessione:currSessId,Atleta_A:a.ID,Atleta_B:b?b.ID:'BYE',Bye:b?'':'SI'};
-    try{const res=await post({action:'addRow',sheet:'Accoppiamenti',row});DB.accoppiamenti.push({ID:res.id,...row});nuove.push({ID:res.id,...row});}
-    catch(e){toast('Errore: '+e.message,'err');}
-  }
-  document.getElementById('coppieBody').innerHTML=renderCoppieHTML(nuove);
-  toast('Accoppiamenti generati!');
 }
 
 function renderCoppieHTML(coppie){
@@ -1024,7 +1042,7 @@ function fmtDate(d){
   return new Date((String(d).includes('T')?d:d+'T12:00:00')).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 function todayStr(){return new Date().toISOString().split('T')[0];}
-function lvBadge(lv){return{'Corso Giovanile':'lv-giovani','Settore Giovanile':'lv-settore','Corso Adulti':'lv-adulti','Serie Regionale':'lv-regionali','Agonista Nazionale':'lv-nazionali'}[lv]||'badge-gray';}
+function lvBadge(lv){return{'Corso Giovanile':'lv-giovani','Settore Giovanile':'lv-settore','Corso Adulti':'lv-adulti','Serie Regionale':'lv-regionali','Agonista Nazionale':'lv-nazionali','Torneo':'badge-gold'}[lv]||'badge-gray';}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function toast(msg,type='ok'){
