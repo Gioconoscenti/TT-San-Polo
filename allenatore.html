@@ -79,11 +79,11 @@ tr:hover td{background:var(--bg3)}
 .modal-grid .full{grid-column:1/-1}
 
 .pres-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-.pres-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;user-select:none}
-.pres-item:hover{border-color:var(--gold)}
-.pres-item.presente{background:#1a1400;border-color:var(--gold)}
-.pres-item input{accent-color:var(--gold);width:15px;height:15px;flex-shrink:0;cursor:pointer}
+.pres-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);transition:all .15s;user-select:none}
+.pres-item.presente{background:#1a1400;border-color:#3a3000}
 .pres-name{font-size:.88rem;flex:1}
+.pres-del{background:transparent;border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:5px;flex-shrink:0;cursor:pointer;font-size:.78rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pres-del:hover{border-color:var(--red2);color:var(--red2)}
 
 .coppie-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .coppia-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px}
@@ -258,7 +258,7 @@ tr:hover td{background:var(--bg3)}
         <div class="card-title">Presenze <span id="countPres" class="badge badge-gold">0 presenti</span></div>
         <div class="action-bar" style="margin-bottom:10px;">
           <div class="fg" style="margin:0;flex:1;min-width:180px;">
-            <label>Aggiungi atleta non in elenco</label>
+            <label>Aggiungi atleta</label>
             <input id="extraAtletaSearch" placeholder="🔍 Cerca atleta…" autocomplete="off" oninput="filterAtletaPicker('extraAtletaSel','extraAtletaSearch')" style="margin-bottom:6px;">
             <select id="extraAtletaSel"><option value="">Seleziona una sessione...</option></select>
           </div>
@@ -1165,78 +1165,101 @@ function loadPresenze(){
     renderSessOggiQuick();
     return;
   }
+  renderPresenzeBody();
+  renderCoppieEsist(id);
+}
+
+// Nel pannello compaiono SOLO gli atleti che hanno una presenza registrata
+// (auto check-in da atleta.html oppure aggiunti qui dall'allenatore).
+// L'elenco completo degli atleti è disponibile solo nel menu "Aggiungi atleta".
+const presBusy=new Set(); // ID_Atleta con una scrittura presenza in corso
+
+function refreshPresCount(){
+  const n=new Set(DB.presenze
+    .filter(p=>String(p.ID_Sessione)===String(currSessId))
+    .map(p=>String(p.ID_Atleta))).size;
+  document.getElementById('countPres').textContent=n+(n===1?' presente':' presenti');
+  document.getElementById('btnGenera').disabled=n<2;
+}
+
+function presRowHTML(a,sess){
+  const fuori=sess&&sess.Aperta!=='SI'&&sess.Corso&&!getLivelli(a).includes(sess.Corso);
+  return`<div class="pres-item presente" data-atl="${a.ID}">
+    <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}${fuori?' <span class="badge badge-gray" style="margin-left:4px;">fuori corso</span>':''}</span>
+    <button class="pres-del" title="Rimuovi presenza" onclick="rimuoviPresenza(${a.ID})">✕</button>
+  </div>`;
+}
+
+function renderPresenzeBody(){
+  const id=currSessId;if(!id)return;
   const sess=DB.sessioni.find(s=>String(s.ID)===String(id));
-  const presIds=DB.presenze.filter(p=>String(p.ID_Sessione)===String(id)).map(p=>String(p.ID_Atleta));
+  const presenti=presAtletiSess(id);
+  const presSet=new Set(presenti.map(a=>String(a.ID)));
 
-  // Se sessione aperta: tutti gli atleti attivi; altrimenti filtra per corso
-  const atletiAttivi=DB.atleti.filter(a=>a.Attivo==='SI');
-  const inCorso=atletiAttivi.filter(a=>sess?.Aperta==='SI'||getLivelli(a).includes(sess?.Corso));
-  const idsInCorso=new Set(inCorso.map(a=>String(a.ID)));
-  // Atleti già presenti ma non del corso: es. aggiunti a mano, o corso cambiato dopo la presenza
-  const fuoriElencoPresenti=atletiAttivi.filter(a=>!idsInCorso.has(String(a.ID))&&presIds.includes(String(a.ID)));
-  const daMostrare=[...inCorso,...fuoriElencoPresenti].sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+  document.getElementById('presenzeBody').innerHTML=presenti.length
+    ?`<div class="pres-grid">${presenti.map(a=>presRowHTML(a,sess)).join('')}</div>`
+    :'<div class="empty">Nessun atleta presente.<br>Aggiungi un atleta qui sopra.</div>';
 
-  document.getElementById('countPres').textContent=presIds.length+' presenti';
-  document.getElementById('btnGenera').disabled=presIds.length<2;
-
-  document.getElementById('presenzeBody').innerHTML=daMostrare.length
-    ?`<div class="pres-grid">${daMostrare.map(a=>{
-        const p=presIds.includes(String(a.ID));
-        const fuori=!idsInCorso.has(String(a.ID));
-        return`<div class="pres-item${p?' presente':''}" onclick="togglePres(${a.ID},this)">
-          <input type="checkbox" ${p?'checked':''} onclick="event.stopPropagation();togglePres(${a.ID},this.closest('.pres-item'))">
-          <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}${fuori?' <span class="badge badge-gray" style="margin-left:4px;">fuori elenco</span>':''}</span>
-        </div>`;
-      }).join('')}</div>`
-    :'<div class="empty">Nessun atleta per questo livello</div>';
-
+  const extraSel=document.getElementById('extraAtletaSel');
   if(extraSel){
-    const idsMostrati=new Set(daMostrare.map(a=>String(a.ID)));
-    const disponibili=atletiAttivi.filter(a=>!idsMostrati.has(String(a.ID))).sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+    const disponibili=DB.atleti.filter(a=>a.Attivo==='SI'&&!presSet.has(String(a.ID)))
+      .sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
     setupAtletaPicker('extraAtletaSel','extraAtletaSearch',atletiPickerOptions(disponibili,'Seleziona atleta...'));
   }
-
-  renderCoppieEsist(id);
+  refreshPresCount();
   renderSessOggiQuick();
 }
 
 async function aggiungiAtletaExtra(){
   const sel=document.getElementById('extraAtletaSel');
-  const btn=document.getElementById('btnAggiungiExtra');
   const atletaId=sel.value;
   if(!atletaId){toast('Seleziona un atleta','err');return;}
-  if(!currSessId||btn.disabled)return;
-  btn.disabled=true;
+  if(!currSessId)return;
+  const key=String(atletaId);
+  if(presBusy.has(key))return;
+  if(DB.presenze.some(p=>String(p.ID_Sessione)===String(currSessId)&&String(p.ID_Atleta)===key)){
+    toast('Atleta già presente','err');return;
+  }
+  presBusy.add(key);
+  // aggiunta ottimistica: la UI si aggiorna subito, la scrittura sul foglio va in background
+  const tmp={ID:'tmp_'+Date.now(),ID_Sessione:currSessId,ID_Atleta:atletaId,Fonte:'allenatore'};
+  DB.presenze.push(tmp);
+  document.getElementById('extraAtletaSearch').value='';
+  renderPresenzeBody();
   try{
-    const res=await post({action:'addRow',sheet:'Presenze',row:{ID_Sessione:currSessId,ID_Atleta:atletaId,Timestamp:new Date().toISOString(),Fonte:'allenatore'}});
-    DB.presenze.push({ID:res.id,ID_Sessione:currSessId,ID_Atleta:atletaId,Fonte:'allenatore'});
-    toast('Atleta aggiunto alla sessione');
-    loadPresenze();
-  }catch(e){toast(e.message,'err');}
-  finally{btn.disabled=false;}
+    const res=await post({action:'addRow',sheet:'Presenze',row:{ID_Sessione:currSessId,ID_Atleta:atletaId}});
+    tmp.ID=res.id;
+  }catch(e){
+    DB.presenze=DB.presenze.filter(p=>p!==tmp);
+    renderPresenzeBody();
+    toast('Errore: '+e.message,'err');
+  }finally{
+    presBusy.delete(key);
+  }
 }
 
-async function togglePres(atletaId,el){
+async function rimuoviPresenza(atletaId){
   if(!currSessId)return;
-  const presente=el.classList.contains('presente');
-  const cb=el.querySelector('input[type=checkbox]');
-  if(presente){
-    const p=DB.presenze.find(x=>String(x.ID_Sessione)===String(currSessId)&&String(x.ID_Atleta)===String(atletaId));
-    if(p){
-      try{await post({action:'deleteRow',sheet:'Presenze',id:p.ID});DB.presenze=DB.presenze.filter(x=>String(x.ID)!==String(p.ID));el.classList.remove('presente');if(cb)cb.checked=false;}
-      catch(e){toast(e.message,'err');}
+  const key=String(atletaId);
+  if(presBusy.has(key))return;
+  const backup=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId)&&String(p.ID_Atleta)===key);
+  if(!backup.length)return;
+  presBusy.add(key);
+  // rimozione ottimistica
+  DB.presenze=DB.presenze.filter(p=>!(String(p.ID_Sessione)===String(currSessId)&&String(p.ID_Atleta)===key));
+  renderPresenzeBody();
+  try{
+    for(const r of backup){
+      if(String(r.ID).startsWith('tmp_'))continue; // riga non ancora scritta sul server
+      await post({action:'deleteRow',sheet:'Presenze',id:r.ID});
     }
-  }else{
-    try{
-      const res=await post({action:'addRow',sheet:'Presenze',row:{ID_Sessione:currSessId,ID_Atleta:atletaId,Timestamp:new Date().toISOString(),Fonte:'allenatore'}});
-      DB.presenze.push({ID:res.id,ID_Sessione:currSessId,ID_Atleta:atletaId,Fonte:'allenatore'});
-      el.classList.add('presente');if(cb)cb.checked=true;
-    }catch(e){toast(e.message,'err');}
+  }catch(e){
+    DB.presenze.push(...backup);
+    renderPresenzeBody();
+    toast('Errore: '+e.message,'err');
+  }finally{
+    presBusy.delete(key);
   }
-  const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId)).length;
-  document.getElementById('countPres').textContent=n+' presenti';
-  document.getElementById('btnGenera').disabled=n<2;
-  renderSessOggiQuick();
 }
 
 // ── ACCOPPIAMENTI (con modifica manuale) ───────────────
