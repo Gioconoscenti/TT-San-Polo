@@ -72,7 +72,10 @@ const SHEETS = {
   Presenze: {
     idCol: 'ID',
     required: ['ID_Sessione', 'ID_Atleta'],
-    fields: ['ID_Sessione', 'ID_Atleta', 'Timestamp', 'Fonte'],
+    // Cesto = 'SI' se l'allenatore ha messo l'atleta al cesto (multipalla): resta presente
+    // ma viene escluso dalla generazione degli accoppiamenti. Impostabile solo via updateRow
+    // (quindi solo dal pannello allenatore, che è autenticato).
+    fields: ['ID_Sessione', 'ID_Atleta', 'Timestamp', 'Fonte', 'Cesto'],
     uniqueOn: ['ID_Sessione', 'ID_Atleta']
   },
   Accoppiamenti: {
@@ -265,6 +268,8 @@ function handleAddRow_(body, authorized) {
     // Timestamp e Fonte sono determinati dal server, non dal client, per evitare spoofing.
     row.Timestamp = new Date().toISOString();
     row.Fonte = authorized ? 'allenatore' : 'atleta';
+    // Il flag Cesto non si imposta in creazione: solo l'allenatore, via updateRow.
+    if (!authorized) delete row.Cesto;
   }
 
   validateFields_(def, row);

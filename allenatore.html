@@ -82,8 +82,15 @@ tr:hover td{background:var(--bg3)}
 .pres-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);transition:all .15s;user-select:none}
 .pres-item.presente{background:#1a1400;border-color:#3a3000}
 .pres-name{font-size:.88rem;flex:1}
-.pres-del{background:transparent;border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:5px;flex-shrink:0;cursor:pointer;font-size:.78rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pres-del,.pres-cesto{background:transparent;border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:5px;flex-shrink:0;cursor:pointer;font-size:.78rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .pres-del:hover{border-color:var(--red2);color:var(--red2)}
+.pres-cesto:hover{border-color:var(--gold)}
+.pres-cesto.on{background:#1a1400;border-color:var(--gold)}
+.pres-item.cesto{border-color:#3a3000;background:#151100}
+.cesto-box{margin-top:12px;background:#1a1400;border:1px solid #3a3000;border-radius:var(--r);padding:12px 14px}
+.cesto-title{font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.cesto-names{display:flex;flex-wrap:wrap;gap:6px}
+.cesto-name{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:.82rem}
 
 .coppie-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .coppia-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px}
@@ -162,20 +169,28 @@ tr:hover td{background:var(--bg3)}
 .exp-chk label{margin:0;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--text);cursor:pointer}
 
 /* RESPONSIVE – tablet & cellulare */
+
+/* Tablet e touch (iPad landscape incluso): comandi più grandi, tab scorrevoli */
+@media(max-width:1024px){
+  main{padding:16px}
+  header{height:auto;min-height:52px;padding:8px 14px;gap:10px;flex-wrap:wrap}
+  .nav-tabs{margin-left:0;width:100%;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none}
+  .nav-tabs::-webkit-scrollbar{display:none}
+  .nav-tab{flex:0 0 auto;padding:9px 13px}
+  input,select{font-size:16px;padding:10px 12px}
+  .btn{padding:10px 16px;font-size:.85rem}
+  .btn-sm{padding:7px 11px;font-size:.74rem}
+  .pres-del,.pres-cesto{width:32px;height:32px;font-size:.85rem}
+}
+
+/* Layout a colonna singola: iPad portrait e sotto */
 @media(max-width:900px){
   main{padding:14px}
   .grid2{grid-template-columns:1fr}
-  header{height:auto;min-height:52px;padding:8px 14px;gap:8px;flex-wrap:wrap}
-  .nav-tabs{margin-left:0;width:100%;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-  .nav-tab{flex:0 0 auto;padding:8px 12px}
-  input,select{font-size:16px;padding:10px 12px}
-  .btn{padding:10px 16px;font-size:.85rem}
-  .btn-sm{padding:6px 11px;font-size:.72rem}
   .sess-actions{width:100%}
-  .sess-actions .btn{flex:1;justify-content:center}
+  .sess-actions .btn{flex:1 1 auto;justify-content:center;white-space:normal}
   .pres-grid{grid-template-columns:1fr}
   .pres-item{padding:13px 14px}
-  .pres-item input{width:20px;height:20px}
   .pres-name{font-size:.95rem}
   .coppie-grid{grid-template-columns:1fr}
   .modal{padding:16px;width:94%}
@@ -183,12 +198,21 @@ tr:hover td{background:var(--bg3)}
   table{font-size:.8rem}
   th,td{padding:6px 6px}
 }
+
+/* Cellulare */
 @media(max-width:560px){
   .logo-sub{display:none}
   .stat-box{min-width:calc(50% - 6px)}
   .stat-box .num{font-size:1.6rem}
   .card{padding:14px}
   .card-title{flex-wrap:wrap;gap:6px}
+  .sess-bar{padding:12px}
+  .sess-actions{flex-direction:column}
+  .sess-actions .btn{width:100%}
+  .sess-oggi-quick .sess-chip{width:100%;justify-content:space-between;white-space:normal;border-radius:var(--r);padding:11px 14px}
+  #btnAggiungiExtra{width:100%}
+  .coppie-tools{width:100%}
+  .coppie-tools .btn{flex:1 1 auto;justify-content:center}
 }
 </style>
 </head>
@@ -277,6 +301,7 @@ tr:hover td{background:var(--bg3)}
           </span>
         </div>
         <div id="coppieBody"><div class="empty">Genera gli accoppiamenti</div></div>
+        <div id="cestoBox"></div>
       </div>
     </div>
   </div>
@@ -1162,6 +1187,7 @@ function loadPresenze(){
     coppieDraft=[];renderCoppie();
     document.getElementById('countPres').textContent='0 presenti';
     if(extraSel){setupAtletaPicker('extraAtletaSel','extraAtletaSearch',[{value:'',label:'Seleziona una sessione...'}]);}
+    renderCestoBox();
     renderSessOggiQuick();
     return;
   }
@@ -1174,18 +1200,27 @@ function loadPresenze(){
 // L'elenco completo degli atleti è disponibile solo nel menu "Aggiungi atleta".
 const presBusy=new Set(); // ID_Atleta con una scrittura presenza in corso
 
+function isCesto(atletaId){
+  const p=DB.presenze.find(x=>String(x.ID_Sessione)===String(currSessId)&&String(x.ID_Atleta)===String(atletaId));
+  return !!p&&String(p.Cesto||'').toUpperCase()==='SI';
+}
+
 function refreshPresCount(){
-  const n=new Set(DB.presenze
-    .filter(p=>String(p.ID_Sessione)===String(currSessId))
-    .map(p=>String(p.ID_Atleta))).size;
-  document.getElementById('countPres').textContent=n+(n===1?' presente':' presenti');
-  document.getElementById('btnGenera').disabled=n<2;
+  const rows=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId));
+  const ids=new Set(rows.map(p=>String(p.ID_Atleta)));
+  const cesto=new Set(rows.filter(p=>String(p.Cesto||'').toUpperCase()==='SI').map(p=>String(p.ID_Atleta)));
+  const n=ids.size;
+  document.getElementById('countPres').textContent=
+    n+(n===1?' presente':' presenti')+(cesto.size?` · ${cesto.size} al cesto`:'');
+  document.getElementById('btnGenera').disabled=(n-cesto.size)<2;
 }
 
 function presRowHTML(a,sess){
   const fuori=sess&&sess.Aperta!=='SI'&&sess.Corso&&!getLivelli(a).includes(sess.Corso);
-  return`<div class="pres-item presente" data-atl="${a.ID}">
-    <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}${fuori?' <span class="badge badge-gray" style="margin-left:4px;">fuori corso</span>':''}</span>
+  const cesto=isCesto(a.ID);
+  return`<div class="pres-item presente${cesto?' cesto':''}" data-atl="${a.ID}">
+    <span class="pres-name">${esc(a.Cognome)} ${esc(a.Nome)}${cesto?' <span class="badge badge-gold" style="margin-left:4px;">🧺 cesto</span>':''}${fuori?' <span class="badge badge-gray" style="margin-left:4px;">fuori corso</span>':''}</span>
+    <button class="pres-cesto${cesto?' on':''}" title="Al cesto: presente ma fuori dagli accoppiamenti" onclick="toggleCesto(${a.ID})">🧺</button>
     <button class="pres-del" title="Rimuovi presenza" onclick="rimuoviPresenza(${a.ID})">✕</button>
   </div>`;
 }
@@ -1207,7 +1242,48 @@ function renderPresenzeBody(){
     setupAtletaPicker('extraAtletaSel','extraAtletaSearch',atletiPickerOptions(disponibili,'Seleziona atleta...'));
   }
   refreshPresCount();
+  renderCestoBox();
   renderSessOggiQuick();
+}
+
+function renderCestoBox(){
+  const el=document.getElementById('cestoBox');
+  if(!el)return;
+  if(!currSessId){el.innerHTML='';return;}
+  const cesto=DB.presenze
+    .filter(p=>String(p.ID_Sessione)===String(currSessId)&&String(p.Cesto||'').toUpperCase()==='SI')
+    .map(p=>DB.atleti.find(a=>String(a.ID)===String(p.ID_Atleta)))
+    .filter(Boolean)
+    .sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+  el.innerHTML=cesto.length
+    ?`<div class="cesto-box">
+        <div class="cesto-title">🧺 Al cesto — fuori dagli accoppiamenti</div>
+        <div class="cesto-names">${cesto.map(a=>`<span class="cesto-name">${esc(a.Cognome+' '+a.Nome)}</span>`).join('')}</div>
+      </div>`
+    :'';
+}
+
+async function toggleCesto(atletaId){
+  if(!currSessId)return;
+  const key=String(atletaId);
+  if(presBusy.has(key))return;
+  const pr=DB.presenze.find(p=>String(p.ID_Sessione)===String(currSessId)&&String(p.ID_Atleta)===key);
+  if(!pr)return;
+  if(String(pr.ID).startsWith('tmp_')){toast('Attendi il salvataggio della presenza…','err');return;}
+  const prev=String(pr.Cesto||'').toUpperCase()==='SI'?'SI':'';
+  const next=prev==='SI'?'':'SI';
+  presBusy.add(key);
+  pr.Cesto=next;
+  renderPresenzeBody();
+  try{
+    await post({action:'updateRow',sheet:'Presenze',id:pr.ID,data:{Cesto:next}});
+  }catch(e){
+    pr.Cesto=prev;
+    renderPresenzeBody();
+    toast('Errore: '+e.message,'err');
+  }finally{
+    presBusy.delete(key);
+  }
 }
 
 async function aggiungiAtletaExtra(){
@@ -1288,6 +1364,7 @@ function renderCoppie(){
   else if(coppieDraft.length)body.innerHTML=renderCoppieHTML(coppieDraft.map(x=>({Atleta_A:x.A,Atleta_B:x.B})));
   else body.innerHTML='<div class="empty">Nessun accoppiamento generato</div>';
   updateCoppieButtons();
+  renderCestoBox();
 }
 
 function updateCoppieButtons(){
@@ -1373,7 +1450,8 @@ async function generaAcc(){
   if(btn.disabled)return; // già in corso, o non ci sono abbastanza presenti
   btn.disabled=true;
   try{
-    const presIds=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId));
+    // Gli atleti "al cesto" restano presenti ma sono esclusi dagli accoppiamenti.
+    const presIds=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId)&&String(p.Cesto||'').toUpperCase()!=='SI');
     // Deduplica per ID atleta: se per qualsiasi motivo (doppio click, bug residuo) esiste
     // più di una riga di presenza per lo stesso atleta, non va contato due volte, altrimenti
     // può capitare che venga abbinato a sé stesso.
@@ -1382,7 +1460,7 @@ async function generaAcc(){
       if(!a||idsVisti.has(a.ID))return false;
       idsVisti.add(a.ID);return true;
     });
-    if(atletiP.length<2){toast('Almeno 2 atleti presenti','err');return;}
+    if(atletiP.length<2){toast('Servono almeno 2 atleti presenti e non al cesto','err');return;}
     const vecchi=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)===String(currSessId));
     for(const v of vecchi){try{await post({action:'deleteRow',sheet:'Accoppiamenti',id:v.ID});}catch(e){}}
     DB.accoppiamenti=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)!==String(currSessId));
@@ -1425,6 +1503,8 @@ function stampa(){
   const c=coppieDraft.length
     ? renderCoppieHTML(coppieDraft.map(x=>({Atleta_A:x.A,Atleta_B:x.B})))
     : document.getElementById('coppieBody').innerHTML;
+  const cestoEl=document.getElementById('cestoBox');
+  const cesto=cestoEl?cestoEl.innerHTML:'';
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>Accoppiamenti TT San Polo</title><style>
     body{font-family:sans-serif;padding:20px}h2{margin-bottom:16px}
@@ -1434,7 +1514,10 @@ function stampa(){
     .coppia-player{font-size:14px;font-weight:600;line-height:1.6}
     .coppia-vs{font-size:10px;color:#aaa;text-transform:uppercase}
     .bye-card{border-color:#d32f2f}
-  </style></head><body><h2>🏓 Accoppiamenti – TT San Polo</h2>${c}</body></html>`);
+    .cesto-box{margin-top:16px;border:2px solid #333;border-radius:6px;padding:12px 14px}
+    .cesto-title{font-weight:700;margin-bottom:6px}
+    .cesto-name{display:inline-block;border:1px solid #999;border-radius:12px;padding:3px 9px;margin:2px;font-size:12px}
+  </style></head><body><h2>🏓 Accoppiamenti – TT San Polo</h2>${c}${cesto}</body></html>`);
   w.print();
 }
 
