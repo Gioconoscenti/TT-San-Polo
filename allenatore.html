@@ -133,6 +133,63 @@ tr:hover td{background:var(--bg3)}
 @keyframes tin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:sp .6s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* SESSIONE – ricerca + scorciatoie del giorno */
+.sess-pick input{margin-bottom:6px}
+.sess-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sess-oggi-quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.sess-oggi-quick:empty{display:none}
+.sess-oggi-label{width:100%;font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:-3px}
+.sess-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:.85rem;letter-spacing:.5px;transition:all .15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sess-chip:hover{border-color:var(--gold)}
+.sess-chip.active{background:var(--gold);color:#000;border-color:var(--gold)}
+.sess-chip .cnt{font-size:.68rem;opacity:.75}
+
+/* ACCOPPIAMENTI – modifica manuale */
+.coppie-tools{display:flex;gap:6px;flex-wrap:wrap}
+.coppia-edit{flex-direction:column;align-items:stretch;gap:8px}
+.coppia-edit .coppia-num{width:auto;text-align:left;font-size:1rem}
+.coppia-edit-body{display:flex;flex-direction:column;gap:6px;flex:1}
+.coppia-edit select{width:100%}
+.coppia-edit .dup{border-color:var(--red2)}
+.coppia-edit-head{display:flex;justify-content:space-between;align-items:center}
+
+/* EXPORT – scelta colonne */
+.export-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);padding:10px}
+.exp-chk{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:5px;cursor:pointer}
+.exp-chk:hover{background:var(--bg3)}
+.exp-chk input{accent-color:var(--gold);width:auto;flex-shrink:0}
+.exp-chk label{margin:0;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--text);cursor:pointer}
+
+/* RESPONSIVE – tablet & cellulare */
+@media(max-width:900px){
+  main{padding:14px}
+  .grid2{grid-template-columns:1fr}
+  header{height:auto;min-height:52px;padding:8px 14px;gap:8px;flex-wrap:wrap}
+  .nav-tabs{margin-left:0;width:100%;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .nav-tab{flex:0 0 auto;padding:8px 12px}
+  input,select{font-size:16px;padding:10px 12px}
+  .btn{padding:10px 16px;font-size:.85rem}
+  .btn-sm{padding:6px 11px;font-size:.72rem}
+  .sess-actions{width:100%}
+  .sess-actions .btn{flex:1;justify-content:center}
+  .pres-grid{grid-template-columns:1fr}
+  .pres-item{padding:13px 14px}
+  .pres-item input{width:20px;height:20px}
+  .pres-name{font-size:.95rem}
+  .coppie-grid{grid-template-columns:1fr}
+  .modal{padding:16px;width:94%}
+  .modal-grid{grid-template-columns:1fr}
+  table{font-size:.8rem}
+  th,td{padding:6px 6px}
+}
+@media(max-width:560px){
+  .logo-sub{display:none}
+  .stat-box{min-width:calc(50% - 6px)}
+  .stat-box .num{font-size:1.6rem}
+  .card{padding:14px}
+  .card-title{flex-wrap:wrap;gap:6px}
+}
 </style>
 </head>
 <body>
@@ -185,19 +242,24 @@ tr:hover td{background:var(--bg3)}
   <!-- SESSIONE OGGI -->
   <div class="section" id="sec-sessione">
     <div class="sess-bar">
-      <div class="fg" style="margin:0;flex:1;min-width:220px;">
+      <div class="fg sess-pick" style="margin:0;flex:1;min-width:220px;">
         <label>Sessione</label>
+        <input id="sessSearch" placeholder="🔍 Cerca per data, corso o orario…" autocomplete="off" oninput="filterSessOptions()">
         <select id="sessSelect" onchange="loadPresenze()"><option value="">Seleziona sessione...</option></select>
       </div>
-      <button class="btn btn-ghost" onclick="openModalSessNew()">+ Nuova sessione</button>
-      <button class="btn btn-gold" onclick="generaAcc()" id="btnGenera" disabled>⚡ Genera Accoppiamenti</button>
+      <div class="sess-actions">
+        <button class="btn btn-ghost" onclick="openModalSessNew()">+ Nuova sessione</button>
+        <button class="btn btn-gold" onclick="generaAcc()" id="btnGenera" disabled>⚡ Genera Accoppiamenti</button>
+      </div>
     </div>
+    <div class="sess-oggi-quick" id="sessOggiQuick"></div>
     <div class="grid2">
       <div class="card">
         <div class="card-title">Presenze <span id="countPres" class="badge badge-gold">0 presenti</span></div>
         <div class="action-bar" style="margin-bottom:10px;">
           <div class="fg" style="margin:0;flex:1;min-width:180px;">
             <label>Aggiungi atleta non in elenco</label>
+            <input id="extraAtletaSearch" placeholder="🔍 Cerca atleta…" autocomplete="off" oninput="filterAtletaPicker('extraAtletaSel','extraAtletaSearch')" style="margin-bottom:6px;">
             <select id="extraAtletaSel"><option value="">Seleziona una sessione...</option></select>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="aggiungiAtletaExtra()" id="btnAggiungiExtra">+ Aggiungi</button>
@@ -205,7 +267,15 @@ tr:hover td{background:var(--bg3)}
         <div id="presenzeBody"><div class="empty">Seleziona una sessione</div></div>
       </div>
       <div class="card">
-        <div class="card-title">Accoppiamenti <button class="btn btn-ghost btn-sm" onclick="stampa()">🖨 Stampa</button></div>
+        <div class="card-title">Accoppiamenti
+          <span class="coppie-tools">
+            <button class="btn btn-ghost btn-sm" id="btnEditCoppie" onclick="startEditCoppie()" style="display:none;">✏️ Modifica</button>
+            <button class="btn btn-green btn-sm" id="btnSaveCoppie" onclick="salvaCoppie()" style="display:none;">✓ Salva</button>
+            <button class="btn btn-ghost btn-sm" id="btnCancelCoppie" onclick="cancelEditCoppie()" style="display:none;">Annulla</button>
+            <button class="btn btn-ghost btn-sm" id="btnAddCoppia" onclick="addCoppiaRow()" style="display:none;">+ Coppia</button>
+            <button class="btn btn-ghost btn-sm" onclick="stampa()">🖨 Stampa</button>
+          </span>
+        </div>
         <div id="coppieBody"><div class="empty">Genera gli accoppiamenti</div></div>
       </div>
     </div>
@@ -215,7 +285,7 @@ tr:hover td{background:var(--bg3)}
   <div class="section" id="sec-atleti">
     <div class="action-bar">
       <div class="fg" style="margin:0;">
-        <label>Livello</label>
+        <label>Corso</label>
         <select id="filtroLv" onchange="renderAtleti()" style="width:150px;">
           <option value="">Tutti</option>
           <option>Corso Giovanile</option><option>Settore Giovanile</option>
@@ -227,11 +297,36 @@ tr:hover td{background:var(--bg3)}
         <label>Cerca</label>
         <input id="cercaAtl" placeholder="Nome o cognome..." oninput="renderAtleti()" style="width:200px;">
       </div>
+      <div class="fg" style="margin:0;">
+        <label>Genere</label>
+        <select id="filtroGenere" onchange="renderAtleti()" style="width:90px;">
+          <option value="">Tutti</option>
+          <option value="F">F</option>
+          <option value="M">M</option>
+        </select>
+      </div>
+      <div class="fg" style="margin:0;">
+        <label>Categoria</label>
+        <select id="filtroCat" onchange="renderAtleti()" style="width:90px;">
+          <option value="">Tutte</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option>
+        </select>
+      </div>
+      <div class="fg" style="margin:0;">
+        <label>FITET</label>
+        <select id="filtroFitet" onchange="renderAtleti()" style="width:110px;">
+          <option value="">Tutti</option>
+          <option value="SI">Tesserati</option>
+          <option value="NO">Non tess.</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost" onclick="openModalExport()">⬇ Esporta</button>
       <button class="btn btn-gold" onclick="openModalAtleta()">+ Nuovo Atleta</button>
     </div>
     <div class="card" style="padding:0;">
       <table><thead><tr>
-        <th>Cognome</th><th>Nome</th><th>Corsi</th><th>Cat.</th><th>Livello</th><th>Tessera</th><th>Giorni</th><th>Tel.</th><th>Stato</th><th></th>
+        <th>Cognome</th><th>Nome</th><th>Corsi</th><th>Cat.</th><th>Livello</th><th>Scad. Visita</th><th>Giorni</th><th>Tel.</th><th>Stato</th><th></th>
       </tr></thead><tbody id="atletiBody"></tbody></table>
     </div>
   </div>
@@ -264,6 +359,7 @@ tr:hover td{background:var(--bg3)}
       <div class="action-bar">
         <div class="fg" style="margin:0;min-width:250px;">
           <label>Atleta</label>
+          <input id="storicoSearch" placeholder="🔍 Cerca atleta per nome o cognome…" autocomplete="off" oninput="filterAtletaPicker('storicoSel','storicoSearch')" style="margin-bottom:6px;">
           <select id="storicoSel" onchange="loadStorico()"><option value="">Seleziona atleta...</option></select>
         </div>
         <div id="stBadges" style="display:flex;gap:8px;align-items:center;"></div>
@@ -281,6 +377,14 @@ tr:hover td{background:var(--bg3)}
     <div class="modal-grid">
       <div class="fg"><label>Nome</label><input id="fNome" placeholder="Mario"></div>
       <div class="fg"><label>Cognome</label><input id="fCognome" placeholder="Rossi"></div>
+      <div class="fg">
+        <label>Genere</label>
+        <select id="fGenere"><option value="">–</option><option value="Maschio">Maschio</option><option value="Femmina">Femmina</option></select>
+      </div>
+      <div class="fg">
+        <label>Livello</label>
+        <input id="fLivello" placeholder="es. Intermedio">
+      </div>
       <div class="fg full">
         <label>Corsi (seleziona uno o più)</label>
         <div class="levels-row" id="levelsRow">
@@ -296,12 +400,8 @@ tr:hover td{background:var(--bg3)}
         <input id="fCategoria" type="number" min="1" max="7" placeholder="es. 4">
       </div>
       <div class="fg">
-        <label>Livello</label>
-        <input id="fLivello" placeholder="es. Intermedio">
-      </div>
-      <div class="fg">
-        <label>N° Tessera</label>
-        <input id="fTessera" placeholder="es. 12345">
+        <label>Ranking</label>
+        <input id="fRanking" placeholder="es. 1350">
       </div>
       <div class="fg">
         <label>Stato</label>
@@ -309,6 +409,12 @@ tr:hover td{background:var(--bg3)}
       </div>
       <div class="fg"><label>Telefono</label><input id="fTel" placeholder="+39 333 0000000"></div>
       <div class="fg"><label>Email</label><input id="fEmail" placeholder="mario@email.com"></div>
+      <div class="fg"><label>Scadenza Visita Medica</label><input type="date" id="fScadenzaVisita"></div>
+      <div class="fg"><label>Scadenza Pagamento</label><input type="date" id="fScadenzaPagamento"></div>
+      <div class="fg full" style="display:flex;gap:24px;">
+        <div class="day-chk"><input type="checkbox" id="fAgonista"><label for="fAgonista">Agonista</label></div>
+        <div class="day-chk"><input type="checkbox" id="fFitet"><label for="fFitet">Tesserato FITET</label></div>
+      </div>
       <div class="fg full">
         <label>Giorni abituali</label>
         <div class="days-row">
@@ -324,6 +430,57 @@ tr:hover td{background:var(--bg3)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('ovAtleta')">Annulla</button>
       <button class="btn btn-gold" onclick="saveAtleta()" id="btnSaveAtl">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXPORT ATLETI -->
+<div class="overlay" id="ovExport">
+  <div class="modal">
+    <h3>ESPORTA ATLETI</h3>
+    <div class="fg">
+      <label>Modalità</label>
+      <select id="exportPreset" onchange="onExportPresetChange()">
+        <option value="custom">Personalizzata – scegli le colonne</option>
+        <option value="tornei">Anagrafica per Tornei_TT</option>
+      </select>
+    </div>
+    <div id="exportHint" style="display:none;font-size:.78rem;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;margin-bottom:11px;">
+      Genera <code>Anagrafica_TTS.csv</code> con le colonne <b>Nome;Categoria;Ranking;Genere</b> nel formato
+      atteso da Tornei_TT → tab <b>Anagrafica</b> → <b>Importa → Scegli file .csv</b>.
+      Il Nome è «Cognome Nome»; i duplicati vengono ignorati all'import.
+    </div>
+    <div class="fg" id="exportColsWrap">
+      <label>Colonne da esportare</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="exportSelAll(true)">Tutte</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="exportSelAll(false)">Nessuna</button>
+      </div>
+      <div class="export-cols" id="exportCols"></div>
+    </div>
+    <div class="modal-grid">
+      <div class="fg" id="exportFmtWrap">
+        <label>Formato</label>
+        <select id="exportFmt">
+          <option value=";">CSV – separatore «;» (Excel IT)</option>
+          <option value=",">CSV – separatore «,»</option>
+          <option value="\t">TSV – tabulazione</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Ambito</label>
+        <select id="exportScope" onchange="updateExportCount()">
+          <option value="filtered">Solo atleti filtrati</option>
+          <option value="all">Tutti gli atleti</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="margin:0;">
+      <span id="exportCount" style="font-size:.78rem;color:var(--text2);"></span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('ovExport')">Annulla</button>
+      <button class="btn btn-gold" onclick="doExportAtleti()">⬇ Scarica</button>
     </div>
   </div>
 </div>
@@ -515,17 +672,33 @@ function getLivelli(a){
   return String(raw).split(',').map(l=>l.trim()).filter(Boolean);
 }
 
-function renderAtleti(){
+function getAtletiFiltrati(){
   const filtro=document.getElementById('filtroLv').value;
   const cerca=(document.getElementById('cercaAtl').value||'').toLowerCase();
-  const lista=DB.atleti.filter(a=>{
+  const fGen=document.getElementById('filtroGenere').value;
+  const fCat=document.getElementById('filtroCat').value;
+  const fFitet=document.getElementById('filtroFitet').value;
+  return DB.atleti.filter(a=>{
     const livelli=getLivelli(a);
     if(filtro&&!livelli.includes(filtro))return false;
     if(cerca&&!(a.Nome+' '+a.Cognome).toLowerCase().includes(cerca))return false;
+    if(fGen){
+      const g=String(a.Genere||'').trim().toUpperCase();
+      if(!g||g[0]!==fGen)return false;
+    }
+    if(fCat&&String(a.Categoria||'').trim()!==fCat)return false;
+    if(fFitet){
+      const t=String(a.Fitet||'').trim().toUpperCase()==='SI'?'SI':'NO';
+      if(t!==fFitet)return false;
+    }
     return true;
   });
+}
+
+function renderAtleti(){
+  const lista=getAtletiFiltrati();
   const tb=document.getElementById('atletiBody');
-  if(!lista.length){tb.innerHTML='<tr><td colspan="8"><div class="empty">Nessun atleta trovato</div></td></tr>';return;}
+  if(!lista.length){tb.innerHTML='<tr><td colspan="10"><div class="empty">Nessun atleta trovato</div></td></tr>';return;}
   tb.innerHTML=lista.map(a=>{
     const livelli=getLivelli(a);
     const badgesHtml=livelli.map(l=>`<span class="badge ${lvBadge(l)}" style="margin-right:3px;">${esc(l)}</span>`).join('');
@@ -534,7 +707,7 @@ function renderAtleti(){
       <td>${badgesHtml}</td>
       <td style="font-size:.78rem;color:var(--text2);text-align:center;">${esc(a.Categoria)||'–'}</td>
       <td style="font-size:.78rem;color:var(--text2);">${esc(a.Livello)||'–'}</td>
-      <td style="font-family:'Barlow Condensed',sans-serif;font-size:.8rem;color:var(--gold);">${esc(a.Tessera)||'–'}</td>
+      <td style="font-family:'Barlow Condensed',sans-serif;font-size:.8rem;color:var(--text2);">${fmtDate(a.ScadenzaVisita)}</td>
       <td style="font-size:.78rem;color:var(--text2);">${esc(a.Giorni)||'–'}</td>
       <td style="font-size:.78rem;color:var(--text2);">${esc(a.Telefono)||'–'}</td>
       <td>${a.Attivo==='SI'?'<span class="badge badge-green">Attivo</span>':'<span class="badge badge-gray">Inattivo</span>'}</td>
@@ -543,6 +716,95 @@ function renderAtleti(){
         <button class="btn btn-red btn-sm" onclick="delAtleta(${a.ID})">🗑</button>
       </div></td></tr>`;
   }).join('');
+}
+
+// ── EXPORT ATLETI ──────────────────────────────────────
+const ATL_EXPORT_COLS=[
+  ['ID','ID'],['Cognome','Cognome'],['Nome','Nome'],['Genere','Genere'],
+  ['Corsi','Corsi'],['Categoria','Categoria'],['Livello','Livello'],['Ranking','Ranking'],
+  ['Giorni','Giorni'],['ScadenzaVisita','Scadenza visita'],['ScadenzaPagamento','Scadenza pagamento'],
+  ['Agonista','Agonista'],['Fitet','FITET'],['Telefono','Telefono'],['Email','Email'],['Attivo','Attivo']
+];
+function atlExportColumns(){
+  const cols=ATL_EXPORT_COLS.map(c=>({key:c[0],label:c[1]}));
+  const noti=new Set(cols.map(c=>c.key));
+  DB.atleti.forEach(a=>Object.keys(a).forEach(k=>{
+    if(!noti.has(k)){noti.add(k);cols.push({key:k,label:k});}
+  }));
+  return cols;
+}
+function openModalExport(){
+  const box=document.getElementById('exportCols');
+  box.innerHTML=atlExportColumns().map(c=>{
+    const def=c.key!=='ID';
+    return`<div class="exp-chk">
+      <input type="checkbox" id="exp_${esc(c.key)}" value="${esc(c.key)}" ${def?'checked':''} onchange="updateExportCount()">
+      <label for="exp_${esc(c.key)}">${esc(c.label)}</label>
+    </div>`;
+  }).join('');
+  onExportPresetChange();
+  openModal('ovExport');
+}
+function exportSelAll(v){
+  document.querySelectorAll('#exportCols input[type=checkbox]').forEach(cb=>cb.checked=v);
+  updateExportCount();
+}
+function exportSelectedKeys(){
+  return [...document.querySelectorAll('#exportCols input[type=checkbox]:checked')].map(cb=>cb.value);
+}
+function exportRows(){
+  return document.getElementById('exportScope').value==='all'
+    ? [...DB.atleti]
+    : getAtletiFiltrati();
+}
+function isTorneiPreset(){return document.getElementById('exportPreset').value==='tornei';}
+function onExportPresetChange(){
+  const t=isTorneiPreset();
+  document.getElementById('exportHint').style.display=t?'':'none';
+  document.getElementById('exportColsWrap').style.display=t?'none':'';
+  document.getElementById('exportFmtWrap').style.display=t?'none':'';
+  updateExportCount();
+}
+function updateExportCount(){
+  const nr=exportRows().length;
+  const nc=isTorneiPreset()?4:exportSelectedKeys().length;
+  document.getElementById('exportCount').textContent=`${nr} atleti · ${nc} colonne`;
+}
+function csvCell(v,sep){
+  let s=v==null?'':String(v);
+  if(s.includes('"')||s.includes(sep)||s.includes('\n')||s.includes('\r')) s='"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function downloadCsv(text,name){
+  const blob=new Blob(['\uFEFF'+text],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=name;
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function nomeCompleto(a){return((a.Cognome||'')+' '+(a.Nome||'')).replace(/\s+/g,' ').trim();}
+function doExportAtleti(){
+  const rows=exportRows().slice().sort((a,b)=>String(a.Cognome||'').localeCompare(String(b.Cognome||'')));
+  if(!rows.length){toast('Nessun atleta da esportare','err');return;}
+  if(isTorneiPreset()){
+    // Formato anagrafica Tornei_TT: Nome;Categoria;Ranking;Genere  (separatore ';', niente virgolette)
+    const clean=v=>String(v==null?'':v).replace(/[;\r\n]+/g,' ').trim();
+    const lines=['Nome;Categoria;Ranking;Genere'];
+    rows.forEach(a=>lines.push([clean(nomeCompleto(a)),clean(a.Categoria),clean(a.Ranking),
+      String(a.Genere||'').trim().charAt(0).toUpperCase()].join(';')));
+    downloadCsv(lines.join('\n'),'Anagrafica_TTS.csv');
+  }else{
+    const keys=exportSelectedKeys();
+    if(!keys.length){toast('Seleziona almeno una colonna','err');return;}
+    const sep=document.getElementById('exportFmt').value==='\\t'?'\t':document.getElementById('exportFmt').value;
+    const labels=Object.fromEntries(atlExportColumns().map(c=>[c.key,c.label]));
+    const lines=[keys.map(k=>csvCell(labels[k]||k,sep)).join(sep)];
+    rows.forEach(a=>lines.push(keys.map(k=>csvCell(a[k],sep)).join(sep)));
+    downloadCsv(lines.join('\r\n'),`atleti_TTSanPolo_${todayStr()}.csv`);
+  }
+  closeModal('ovExport');
+  toast(`Esportati ${rows.length} atleti`);
 }
 
 function toggleAperta(el){
@@ -559,8 +821,11 @@ function toggleLv(el){
 function openModalAtleta(id=null){
   editAtlId=id;
   document.getElementById('atlModalT').textContent=id?'MODIFICA ATLETA':'NUOVO ATLETA';
-  ['fNome','fCognome','fTel','fEmail','fCategoria','fLivello','fTessera'].forEach(f=>document.getElementById(f).value='');
+  ['fNome','fCognome','fTel','fEmail','fCategoria','fLivello','fRanking','fScadenzaVisita','fScadenzaPagamento'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('fGenere').value='';
   document.getElementById('fAttivo').value='SI';
+  document.getElementById('fAgonista').checked=false;
+  document.getElementById('fFitet').checked=false;
   ['dLun','dMar','dMer','dGio','dVen','dSab'].forEach(d=>document.getElementById(d).checked=false);
   // Reset livelli
   document.querySelectorAll('.lv-chk').forEach(el=>{
@@ -572,11 +837,16 @@ function openModalAtleta(id=null){
     if(a){
       document.getElementById('fNome').value=a.Nome||'';
       document.getElementById('fCognome').value=a.Cognome||'';
+      document.getElementById('fGenere').value=a.Genere||'';
       document.getElementById('fTel').value=a.Telefono||'';
       document.getElementById('fEmail').value=a.Email||'';
       document.getElementById('fCategoria').value=a.Categoria||'';
       document.getElementById('fLivello').value=a.Livello||'';
-      document.getElementById('fTessera').value=a.Tessera||'';
+      document.getElementById('fRanking').value=a.Ranking||'';
+      document.getElementById('fScadenzaVisita').value=a.ScadenzaVisita||'';
+      document.getElementById('fScadenzaPagamento').value=a.ScadenzaPagamento||'';
+      document.getElementById('fAgonista').checked=a.Agonista==='SI';
+      document.getElementById('fFitet').checked=a.Fitet==='SI';
       document.getElementById('fAttivo').value=a.Attivo||'SI';
       const livelli=getLivelli(a);
       document.querySelectorAll('.lv-chk').forEach(el=>{
@@ -598,11 +868,16 @@ async function saveAtleta(){
     .map(d=>document.getElementById(d).nextElementSibling.textContent).join(', ');
   const row={Nome:document.getElementById('fNome').value.trim(),
     Cognome:document.getElementById('fCognome').value.trim(),
+    Genere:document.getElementById('fGenere').value,
     Corsi:livelli,
     Categoria:document.getElementById('fCategoria').value.trim(),
     Livello:document.getElementById('fLivello').value.trim(),
-    Tessera:document.getElementById('fTessera').value.trim(),
+    Ranking:document.getElementById('fRanking').value.trim(),
     Giorni:giorni,
+    ScadenzaVisita:document.getElementById('fScadenzaVisita').value,
+    Agonista:document.getElementById('fAgonista').checked?'SI':'NO',
+    ScadenzaPagamento:document.getElementById('fScadenzaPagamento').value,
+    Fitet:document.getElementById('fFitet').checked?'SI':'NO',
     Telefono:document.getElementById('fTel').value.trim(),
     Email:document.getElementById('fEmail').value.trim(),
     Attivo:document.getElementById('fAttivo').value};
@@ -816,31 +1091,78 @@ async function delSess(id){
 }
 
 // ── SESSIONE OGGI ──────────────────────────────────────
-function renderSessOggi(){
+function sessOptLabel(s){
+  const isOggi=s.Data===todayStr();
+  const orario=s.OraInizio?` ${s.OraInizio}${s.OraFine?'–'+s.OraFine:''}`:'';
+  return (isOggi?'🟢 OGGI – ':'')+fmtDate(s.Data)+orario+' – '+(s.Aperta==='SI'?'🏆 Aperta':s.Corso||'');
+}
+function sessListSorted(){
+  return [...DB.sessioni].sort((a,b)=>new Date(b.Data)-new Date(a.Data));
+}
+function filterSessOptions(keepId){
   const sel=document.getElementById('sessSelect');
-  sel.innerHTML='<option value="">Seleziona sessione...</option>';
-  [...DB.sessioni].sort((a,b)=>new Date(b.Data)-new Date(a.Data)).slice(0,30).forEach(s=>{
-    const opt=document.createElement('option');
-    opt.value=s.ID;
-    const isOggi=s.Data===todayStr();
-    const orario=s.OraInizio?` ${s.OraInizio}${s.OraFine?'–'+s.OraFine:''}`:'';
-    opt.textContent=(isOggi?'🟢 OGGI – ':'')+fmtDate(s.Data)+orario+' – '+(s.Aperta==='SI'?'🏆 Aperta':s.Corso||'');
-    sel.appendChild(opt);
-  });
-  const sOggi=DB.sessioni.find(s=>s.Data===todayStr());
-  if(sOggi){sel.value=sOggi.ID;loadPresenze();}
+  const cur=keepId!=null?String(keepId):sel.value;
+  const terms=(document.getElementById('sessSearch').value||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const list=sessListSorted().filter(s=>{
+    if(!terms.length)return true;
+    const hay=(sessOptLabel(s)+' '+fmtDate(s.Data)+' '+(s.Corso||'')+' '+(s.OraInizio||'')+' '+(s.OraFine||'')).toLowerCase();
+    return terms.every(t=>hay.includes(t));
+  }).slice(0,120);
+  if(cur&&!list.some(s=>String(s.ID)===String(cur))){
+    const s=DB.sessioni.find(x=>String(x.ID)===String(cur));
+    if(s)list.unshift(s);
+  }
+  sel.innerHTML='<option value="">Seleziona sessione...</option>'+
+    list.map(s=>`<option value="${esc(String(s.ID))}">${esc(sessOptLabel(s))}</option>`).join('');
+  sel.value=cur;
+}
+function renderSessOggiQuick(){
+  const box=document.getElementById('sessOggiQuick');
+  if(!box)return;
+  const oggi=DB.sessioni.filter(s=>s.Data===todayStr())
+    .sort((a,b)=>String(a.OraInizio||'').localeCompare(String(b.OraInizio||'')));
+  if(!oggi.length){box.innerHTML='';return;}
+  box.innerHTML='<span class="sess-oggi-label">Sessioni di oggi</span>'+oggi.map(s=>{
+    const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(s.ID)).length;
+    const orario=s.OraInizio?`${esc(s.OraInizio)}${s.OraFine?'–'+esc(s.OraFine):''}`:'';
+    const nome=s.Aperta==='SI'?'🏆 Aperta':esc(s.Corso||'Sessione');
+    return`<button class="sess-chip${String(s.ID)===String(currSessId)?' active':''}" onclick="pickSess('${esc(String(s.ID))}')">
+      <span>${orario?orario+' · ':''}${nome}</span><span class="cnt">${n} pres.</span></button>`;
+  }).join('');
+}
+function pickSess(id){
+  const sel=document.getElementById('sessSelect');
+  if(![...sel.options].some(o=>o.value===String(id))){
+    document.getElementById('sessSearch').value='';
+    filterSessOptions(id);
+  }
+  sel.value=String(id);
+  loadPresenze();
+}
+function renderSessOggi(){
+  document.getElementById('sessSearch').value='';
+  const oggi=DB.sessioni.filter(s=>s.Data===todayStr());
+  const sel=document.getElementById('sessSelect');
+  let target='';
+  if(currSessId&&DB.sessioni.some(s=>String(s.ID)===String(currSessId)))target=String(currSessId);
+  else if(oggi.length===1)target=String(oggi[0].ID);
+  filterSessOptions(target);
+  if(target){sel.value=target;loadPresenze();}
+  else renderSessOggiQuick();
 }
 
 function loadPresenze(){
   const id=document.getElementById('sessSelect').value;
   currSessId=id;
+  editCoppie=false;
   document.getElementById('btnGenera').disabled=!id;
   const extraSel=document.getElementById('extraAtletaSel');
   if(!id){
     document.getElementById('presenzeBody').innerHTML='<div class="empty">Seleziona una sessione</div>';
-    document.getElementById('coppieBody').innerHTML='<div class="empty">Genera gli accoppiamenti</div>';
+    coppieDraft=[];renderCoppie();
     document.getElementById('countPres').textContent='0 presenti';
-    if(extraSel)extraSel.innerHTML='<option value="">Seleziona una sessione...</option>';
+    if(extraSel){setupAtletaPicker('extraAtletaSel','extraAtletaSearch',[{value:'',label:'Seleziona una sessione...'}]);}
+    renderSessOggiQuick();
     return;
   }
   const sess=DB.sessioni.find(s=>String(s.ID)===String(id));
@@ -871,10 +1193,11 @@ function loadPresenze(){
   if(extraSel){
     const idsMostrati=new Set(daMostrare.map(a=>String(a.ID)));
     const disponibili=atletiAttivi.filter(a=>!idsMostrati.has(String(a.ID))).sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
-    extraSel.innerHTML='<option value="">Seleziona atleta...</option>'+disponibili.map(a=>`<option value="${a.ID}">${esc(a.Cognome)} ${esc(a.Nome)}</option>`).join('');
+    setupAtletaPicker('extraAtletaSel','extraAtletaSearch',atletiPickerOptions(disponibili,'Seleziona atleta...'));
   }
 
   renderCoppieEsist(id);
+  renderSessOggiQuick();
 }
 
 async function aggiungiAtletaExtra(){
@@ -913,11 +1236,112 @@ async function togglePres(atletaId,el){
   const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId)).length;
   document.getElementById('countPres').textContent=n+' presenti';
   document.getElementById('btnGenera').disabled=n<2;
+  renderSessOggiQuick();
+}
+
+// ── ACCOPPIAMENTI (con modifica manuale) ───────────────
+let editCoppie=false;
+let coppieDraft=[]; // [{A:id|BYE|'', B:id|BYE|''}]
+
+function presAtletiSess(sessId){
+  const seen=new Set(),out=[];
+  DB.presenze.filter(p=>String(p.ID_Sessione)===String(sessId)).forEach(p=>{
+    const a=DB.atleti.find(x=>String(x.ID)===String(p.ID_Atleta));
+    if(a&&!seen.has(String(a.ID))){seen.add(String(a.ID));out.push(a);}
+  });
+  return out.sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
 }
 
 function renderCoppieEsist(sessId){
+  editCoppie=false;
   const c=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)===String(sessId));
-  document.getElementById('coppieBody').innerHTML=c.length?renderCoppieHTML(c):'<div class="empty">Nessun accoppiamento generato</div>';
+  coppieDraft=c.map(a=>({A:String(a.Atleta_A),B:a.Atleta_B==='BYE'?'BYE':String(a.Atleta_B)}));
+  renderCoppie();
+}
+
+function renderCoppie(){
+  const body=document.getElementById('coppieBody');
+  if(editCoppie)body.innerHTML=renderCoppieEditHTML();
+  else if(coppieDraft.length)body.innerHTML=renderCoppieHTML(coppieDraft.map(x=>({Atleta_A:x.A,Atleta_B:x.B})));
+  else body.innerHTML='<div class="empty">Nessun accoppiamento generato</div>';
+  updateCoppieButtons();
+}
+
+function updateCoppieButtons(){
+  const has=coppieDraft.length>0;
+  const show=(id,v)=>{const el=document.getElementById(id);if(el)el.style.display=v?'':'none';};
+  show('btnEditCoppie',has&&!editCoppie);
+  show('btnSaveCoppie',editCoppie);
+  show('btnCancelCoppie',editCoppie);
+  show('btnAddCoppia',editCoppie);
+}
+
+function coppiaSlot(val){
+  const list=presAtletiSess(currSessId);
+  let html='<select class="coppia-slot">';
+  html+=`<option value=""${val?'':' selected'}>— vuoto —</option>`;
+  html+=`<option value="BYE"${val==='BYE'?' selected':''}>🚫 BYE (riposo)</option>`;
+  html+=list.map(a=>`<option value="${esc(String(a.ID))}"${String(a.ID)===String(val)?' selected':''}>${esc(a.Cognome+' '+a.Nome)}</option>`).join('');
+  return html+'</select>';
+}
+
+function renderCoppieEditHTML(){
+  return`<div class="coppie-grid">${coppieDraft.map((c,i)=>`
+    <div class="coppia-card coppia-edit" data-i="${i}">
+      <div class="coppia-edit-head">
+        <div class="coppia-num">${i+1}</div>
+        <button class="btn btn-red btn-sm" onclick="removeCoppiaRow(${i})">✕</button>
+      </div>
+      <div class="coppia-edit-body">
+        ${coppiaSlot(c.A)}
+        <div class="coppia-vs">vs</div>
+        ${coppiaSlot(c.B)}
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function readCoppieDraftFromDOM(){
+  coppieDraft=[...document.querySelectorAll('#coppieBody .coppia-edit')].map(card=>{
+    const s=card.querySelectorAll('select.coppia-slot');
+    return{A:s[0].value,B:s[1].value};
+  });
+}
+
+function startEditCoppie(){
+  if(!currSessId)return;
+  editCoppie=true;renderCoppie();
+}
+function cancelEditCoppie(){renderCoppieEsist(currSessId);}
+function addCoppiaRow(){readCoppieDraftFromDOM();coppieDraft.push({A:'',B:''});renderCoppie();}
+function removeCoppiaRow(i){readCoppieDraftFromDOM();coppieDraft.splice(i,1);renderCoppie();}
+
+async function salvaCoppie(){
+  if(!currSessId)return;
+  readCoppieDraftFromDOM();
+  const rows=coppieDraft.filter(c=>c.A||c.B).map(c=>{
+    let A=c.A,B=c.B;
+    if(A&&!B)B='BYE';
+    if(B&&!A){A=B;B='BYE';}
+    return{A,B};
+  });
+  const usati=[];
+  rows.forEach(r=>[r.A,r.B].forEach(v=>{if(v&&v!=='BYE')usati.push(v);}));
+  const dup=usati.find((v,idx)=>usati.indexOf(v)!==idx);
+  if(dup&&!confirm('Attenzione: '+nomeAtl(dup)+' è in più coppie. Salvare comunque?'))return;
+  const btn=document.getElementById('btnSaveCoppie');
+  btn.disabled=true;
+  try{
+    const vecchi=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)===String(currSessId));
+    for(const v of vecchi){try{await post({action:'deleteRow',sheet:'Accoppiamenti',id:v.ID});}catch(e){}}
+    DB.accoppiamenti=DB.accoppiamenti.filter(a=>String(a.ID_Sessione)!==String(currSessId));
+    for(const r of rows){
+      const row={ID_Sessione:currSessId,Atleta_A:r.A,Atleta_B:r.B==='BYE'?'BYE':r.B,Bye:r.B==='BYE'?'SI':''};
+      try{const res=await post({action:'addRow',sheet:'Accoppiamenti',row});DB.accoppiamenti.push({ID:res.id,...row});}
+      catch(e){toast('Errore: '+e.message,'err');}
+    }
+    toast('Accoppiamenti aggiornati');
+    renderCoppieEsist(currSessId);
+  }finally{btn.disabled=false;}
 }
 
 async function generaAcc(){
@@ -956,7 +1380,7 @@ async function generaAcc(){
       try{const res=await post({action:'addRow',sheet:'Accoppiamenti',row});DB.accoppiamenti.push({ID:res.id,...row});nuove.push({ID:res.id,...row});}
       catch(e){toast('Errore: '+e.message,'err');}
     }
-    document.getElementById('coppieBody').innerHTML=renderCoppieHTML(nuove);
+    renderCoppieEsist(currSessId);
     toast('Accoppiamenti generati!');
   }finally{
     const n=DB.presenze.filter(p=>String(p.ID_Sessione)===String(currSessId)).length;
@@ -966,7 +1390,7 @@ async function generaAcc(){
 
 function renderCoppieHTML(coppie){
   return`<div class="coppie-grid">${coppie.map((c,i)=>{
-    const nA=nomeAtl(c.Atleta_A),nB=c.Atleta_B==='BYE'?null:nomeAtl(c.Atleta_B);
+    const nA=nomeAtl(c.Atleta_A),nB=(c.Atleta_B==='BYE'||!c.Atleta_B)?null:nomeAtl(c.Atleta_B);
     return nB
       ?`<div class="coppia-card"><div class="coppia-num">${i+1}</div><div><div class="coppia-player">${nA}</div><div class="coppia-vs">vs</div><div class="coppia-player">${nB}</div></div></div>`
       :`<div class="coppia-card bye-card"><div class="coppia-num" style="color:var(--red2);">–</div><div><div class="coppia-player">${nA}</div><div class="coppia-vs" style="color:var(--red2);">riposo</div></div></div>`;
@@ -974,7 +1398,10 @@ function renderCoppieHTML(coppie){
 }
 
 function stampa(){
-  const c=document.getElementById('coppieBody').innerHTML;
+  if(editCoppie)readCoppieDraftFromDOM();
+  const c=coppieDraft.length
+    ? renderCoppieHTML(coppieDraft.map(x=>({Atleta_A:x.A,Atleta_B:x.B})))
+    : document.getElementById('coppieBody').innerHTML;
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>Accoppiamenti TT San Polo</title><style>
     body{font-family:sans-serif;padding:20px}h2{margin-bottom:16px}
@@ -988,13 +1415,38 @@ function stampa(){
   w.print();
 }
 
+// ── SELECT ATLETA CON RICERCA ──────────────────────────
+const _atletaPickers={}; // selectId -> {all:[{value,label}]}
+function setupAtletaPicker(selectId,searchId,options){
+  _atletaPickers[selectId]={all:options};
+  const q=document.getElementById(searchId);
+  renderAtletaPicker(selectId,q?q.value:'');
+}
+function renderAtletaPicker(selectId,q){
+  const data=_atletaPickers[selectId];if(!data)return;
+  const sel=document.getElementById(selectId);
+  const cur=sel.value;
+  const terms=String(q||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  let list=data.all.filter(o=>!o.value||terms.every(t=>o.label.toLowerCase().includes(t)));
+  if(cur&&!list.some(o=>String(o.value)===cur)){
+    const o=data.all.find(x=>String(x.value)===cur);
+    if(o)list=[list[0],o,...list.slice(1)];
+  }
+  sel.innerHTML=list.map(o=>`<option value="${esc(String(o.value))}">${esc(o.label)}</option>`).join('');
+  sel.value=cur;
+}
+function filterAtletaPicker(selectId,searchId){
+  renderAtletaPicker(selectId,document.getElementById(searchId).value);
+}
+function atletiPickerOptions(atleti,placeholder){
+  return [{value:'',label:placeholder}].concat(
+    atleti.map(a=>({value:a.ID,label:`${a.Cognome} ${a.Nome}`})));
+}
+
 // ── STORICO ────────────────────────────────────────────
 function renderStoricoPage(){
-  const sel=document.getElementById('storicoSel');
-  sel.innerHTML='<option value="">Seleziona atleta...</option>';
-  [...DB.atleti].filter(a=>a.Attivo==='SI').sort((a,b)=>a.Cognome.localeCompare(b.Cognome)).forEach(a=>{
-    const opt=document.createElement('option');opt.value=a.ID;opt.textContent=`${a.Cognome} ${a.Nome}`;sel.appendChild(opt);
-  });
+  const atleti=[...DB.atleti].filter(a=>a.Attivo==='SI').sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
+  setupAtletaPicker('storicoSel','storicoSearch',atletiPickerOptions(atleti,'Seleziona atleta...'));
 }
 
 function loadStorico(){

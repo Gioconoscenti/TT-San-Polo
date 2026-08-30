@@ -59,8 +59,9 @@ const SHEETS = {
   Atleti: {
     idCol: 'ID',
     required: ['Nome', 'Cognome'],
-    fields: ['Nome', 'Cognome', 'Corsi', 'Categoria', 'Livello', 'Tessera', 'Giorni', 'Telefono', 'Email', 'Attivo'],
-    // Campi restituiti a chi NON fornisce un token valido (niente Telefono/Email/Tessera).
+    fields: ['Nome', 'Cognome', 'Genere', 'Corsi', 'Categoria', 'Livello', 'Ranking', 'Giorni',
+             'ScadenzaVisita', 'Agonista', 'ScadenzaPagamento', 'Fitet', 'Telefono', 'Email', 'Attivo'],
+    // Campi restituiti a chi NON fornisce un token valido (niente contatti/dati amministrativi).
     publicFields: ['ID', 'Nome', 'Cognome', 'Corsi', 'Livelli', 'Livello', 'Categoria', 'Giorni', 'Attivo']
   },
   Sessioni: {

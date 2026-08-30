@@ -134,6 +134,7 @@ footer{text-align:center;padding:14px;font-size:.68rem;color:var(--text2);border
       </div>
       <div class="fg">
         <label>Il tuo nome</label>
+        <input id="atlSearch" placeholder="🔍 Cerca il tuo nome…" autocomplete="off" oninput="filterAtl()" style="margin-bottom:8px;">
         <select id="atlSelect"><option value="">Prima seleziona una sessione</option></select>
       </div>
       <div class="alert alert-err" id="err1">Seleziona una sessione e il tuo nome.</div>
@@ -177,6 +178,7 @@ const GIORNI=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì'
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let DB={atleti:[],sessioni:[],presenze:[]};
 let selSess=null,selAtl=null,modeRimozione=false;
+let atlOpts=[];
 
 async function get(action){
   const r=await fetch(API+'?action='+encodeURIComponent(action));
@@ -252,18 +254,29 @@ async function init(){
 function onSessChange(){
   const id=document.getElementById('sessSelect').value;
   const sel=document.getElementById('atlSelect');
-  if(!id){sel.innerHTML='<option value="">Prima seleziona una sessione</option>';return;}
+  const search=document.getElementById('atlSearch');
+  if(search)search.value='';
+  if(!id){atlOpts=[];sel.innerHTML='<option value="">Prima seleziona una sessione</option>';return;}
   const sess=DB.sessioni.find(s=>String(s.ID)===String(id));
   function getCorsi(a){return String(a.Corsi||a.Livelli||a.Livello||'').split(',').map(l=>l.trim()).filter(Boolean);}
   // Sessione aperta: tutti gli atleti attivi
-  let atleti=DB.atleti.filter(a=>{
+  atlOpts=DB.atleti.filter(a=>{
     if(a.Attivo!=='SI')return false;
     if(sess?.Aperta==='SI')return true;
     return getCorsi(a).includes(sess?.Corso);
   }).sort((a,b)=>a.Cognome.localeCompare(b.Cognome));
-  sel.innerHTML='<option value="">Seleziona il tuo nome...</option>';
-  atleti.forEach(a=>{const opt=document.createElement('option');opt.value=a.ID;opt.textContent=`${a.Cognome} ${a.Nome}`;sel.appendChild(opt);});
+  renderAtlOptions();
 }
+function renderAtlOptions(){
+  const sel=document.getElementById('atlSelect');
+  const cur=sel.value;
+  const terms=(document.getElementById('atlSearch').value||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const list=atlOpts.filter(a=>!terms.length||terms.every(t=>(a.Cognome+' '+a.Nome).toLowerCase().includes(t)));
+  sel.innerHTML='<option value="">Seleziona il tuo nome...</option>'+
+    list.map(a=>`<option value="${esc(String(a.ID))}">${esc(a.Cognome+' '+a.Nome)}</option>`).join('');
+  if(cur&&list.some(a=>String(a.ID)===String(cur)))sel.value=cur;
+}
+function filterAtl(){renderAtlOptions();}
 
 function goStep2(){
   const sId=document.getElementById('sessSelect').value;
@@ -378,6 +391,9 @@ function reset(){
   document.getElementById('step3').style.display='none';
   document.getElementById('step1').style.display='block';
   selSess=null;selAtl=null;modeRimozione=false;
+  atlOpts=[];
+  document.getElementById('atlSearch').value='';
+  document.getElementById('atlSelect').innerHTML='<option value="">Prima seleziona una sessione</option>';
   init();
 }
 
